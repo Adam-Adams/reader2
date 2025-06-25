@@ -1,0 +1,11 @@
+{
+  "id": "speed-reader",
+  "name": "Speed Reader",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Plugin za brzo čitanje tekstova, PDF i DOCX fajlova. Podržava različite brzine čitanja i ekstraktovanje teksta iz dokumenata.",
+  "author": "Adam Adams",
+  "authorUrl": "https://github.com/Adam-Adams",
+  "fundingUrl": "",
+  "isDesktopOnly": false
+}
