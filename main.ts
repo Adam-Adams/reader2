@@ -27,7 +27,7 @@ export default class SpeedReaderPlugin extends Plugin {
             id: 'open-speed-reader',
             name: 'Open Speed Reader',
             callback: () => {
-                new SpeedReaderModal(this.app, this.settings).open();
+                new SpeedReaderModal(this.app, this, this.settings).open();
             }
         });
 
@@ -89,7 +89,7 @@ export default class SpeedReaderPlugin extends Plugin {
             }
 
             if (text.trim()) {
-                const modal = new SpeedReaderModal(this.app, this.settings);
+                const modal = new SpeedReaderModal(this.app, this, this.settings);
                 modal.setText(text);
                 modal.open();
             } else {
@@ -98,54 +98,6 @@ export default class SpeedReaderPlugin extends Plugin {
         } catch (error) {
             console.error('Error reading file:', error);
             new Notice(`Error reading file: ${error.message}`);
-        }
-    }
-
-    async loadFileContent(file: TFile, infoElement: HTMLElement) {
-        try {
-            infoElement.empty();
-            infoElement.createEl('div', { 
-                text: `Loading: ${file.name}...`,
-                cls: 'loading-text'
-            });
-
-            let text = '';
-            const extension = file.extension.toLowerCase();
-
-            switch (extension) {
-                case 'md':
-                case 'txt':
-                    text = await this.app.vault.read(file);
-                    break;
-                case 'pdf':
-                    text = await this.extractTextFromPDF(file);
-                    break;
-                case 'docx':
-                    text = await this.extractTextFromDOCX(file);
-                    break;
-                default:
-                    throw new Error(`Unsupported file type: ${extension}`);
-            }
-
-            if (text.trim()) {
-                this.setText(text);
-                this.updateDisplay();
-                
-                infoElement.empty();
-                infoElement.createEl('div', { 
-                    text: `✓ Loaded: ${file.name} (${this.words.length} words)`,
-                    cls: 'success-text'
-                });
-            } else {
-                throw new Error('No text found in file');
-            }
-        } catch (error) {
-            console.error('Error loading file:', error);
-            infoElement.empty();
-            infoElement.createEl('div', { 
-                text: `✗ Error: ${error.message}`,
-                cls: 'error-text'
-            });
         }
     }
 
@@ -164,7 +116,7 @@ export default class SpeedReaderPlugin extends Plugin {
             let fullText = '';
             
             // Extract text from each page
-            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            for (let pageNum = 1; let pageNum <= pdf.numPages; pageNum++) {
                 try {
                     const page = await pdf.getPage(pageNum);
                     const textContent = await page.getTextContent();
@@ -234,6 +186,7 @@ export default class SpeedReaderPlugin extends Plugin {
 }
 
 class SpeedReaderModal extends Modal {
+    private plugin: SpeedReaderPlugin;
     private settings: SpeedReaderSettings;
     private text: string = '';
     private words: string[] = [];
@@ -244,8 +197,9 @@ class SpeedReaderModal extends Modal {
     private controlsElement: HTMLDivElement;
     private progressElement: HTMLDivElement;
 
-    constructor(app: App, settings: SpeedReaderSettings) {
+    constructor(app: App, plugin: SpeedReaderPlugin, settings: SpeedReaderSettings) {
         super(app);
+        this.plugin = plugin;
         this.settings = settings;
     }
 
@@ -262,6 +216,54 @@ class SpeedReaderModal extends Modal {
             .trim()
             .split(' ')
             .filter(word => word.length > 0);
+    }
+
+    async loadFileContent(file: TFile, infoElement: HTMLElement) {
+        try {
+            infoElement.empty();
+            infoElement.createEl('div', { 
+                text: `Loading: ${file.name}...`,
+                cls: 'loading-text'
+            });
+
+            let text = '';
+            const extension = file.extension.toLowerCase();
+
+            switch (extension) {
+                case 'md':
+                case 'txt':
+                    text = await this.app.vault.read(file);
+                    break;
+                case 'pdf':
+                    text = await this.plugin.extractTextFromPDF(file);
+                    break;
+                case 'docx':
+                    text = await this.plugin.extractTextFromDOCX(file);
+                    break;
+                default:
+                    throw new Error(`Unsupported file type: ${extension}`);
+            }
+
+            if (text.trim()) {
+                this.setText(text);
+                this.updateDisplay();
+                
+                infoElement.empty();
+                infoElement.createEl('div', { 
+                    text: `✓ Loaded: ${file.name} (${this.words.length} words)`,
+                    cls: 'success-text'
+                });
+            } else {
+                throw new Error('No text found in file');
+            }
+        } catch (error) {
+            console.error('Error loading file:', error);
+            infoElement.empty();
+            infoElement.createEl('div', { 
+                text: `✗ Error: ${error.message}`,
+                cls: 'error-text'
+            });
+        }
     }
 
     onOpen() {
