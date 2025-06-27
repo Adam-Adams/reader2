@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es2018",
+    "module": "esnext",
+    "lib": ["es2018", "dom"],
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": ".",
+    "rootDir": ".",
+    "noEmit": false
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
+}

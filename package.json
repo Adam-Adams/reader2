@@ -25,7 +25,8 @@
     "typescript": "^4.7.4"
   },
   "dependencies": {
-    "pdfjs-dist": "^3.11.174",
-    "mammoth": "^1.6.0"
+    "epub2": "^3.0.2",
+    "mammoth": "^1.6.0",
+    "pdfjs-dist": "^3.11.174"
   }
 }

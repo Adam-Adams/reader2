@@ -1,6 +1,10 @@
 import { App, Plugin, PluginSettingTab, Setting, TFile, Modal, Notice, FileSystemAdapter } from 'obsidian';
 import * as pdfjsLib from 'pdfjs-dist';
 import * as mammoth from 'mammoth';
+import EPub from 'epub2';
+import { promises as fs } from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 interface SpeedReaderSettings {
     wordsPerMinute: number;
@@ -17,12 +21,11 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
 };
 
 export default class SpeedReaderPlugin extends Plugin {
-    settings: SpeedReaderSettings;
+    settings!: SpeedReaderSettings;
 
     async onload() {
         await this.loadSettings();
 
-        // Add command to open speed reader
         this.addCommand({
             id: 'open-speed-reader',
             name: 'Open Speed Reader',
@@ -31,7 +34,6 @@ export default class SpeedReaderPlugin extends Plugin {
             }
         });
 
-        // Add command to speed read current file
         this.addCommand({
             id: 'speed-read-current-file',
             name: 'Speed Read Current File',
@@ -45,7 +47,6 @@ export default class SpeedReaderPlugin extends Plugin {
             }
         });
 
-        // Add context menu item for supported files
         this.registerEvent(
             this.app.workspace.on('file-menu', (menu, file) => {
                 if (file instanceof TFile && this.isSupportedFile(file)) {
@@ -61,9 +62,7 @@ export default class SpeedReaderPlugin extends Plugin {
             })
         );
 
-        // Add settings tab
         this.addSettingTab(new SpeedReaderSettingTab(this.app, this));
-
         console.log('Speed Reader plugin loaded');
     }
 
@@ -83,6 +82,9 @@ export default class SpeedReaderPlugin extends Plugin {
                 case 'docx':
                     text = await this.extractTextFromDOCX(file);
                     break;
+                case 'epub':
+                    text = await this.extractTextFromEPUB(file);
+                    break;
                 default:
                     new Notice(`Unsupported file type: ${extension}`);
                     return;
@@ -97,78 +99,135 @@ export default class SpeedReaderPlugin extends Plugin {
             }
         } catch (error) {
             console.error('Error reading file:', error);
-            new Notice(`Error reading file: ${error.message}`);
+            new Notice(`Error reading file: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
     async extractTextFromPDF(file: TFile): Promise<string> {
         try {
-            // Get file as ArrayBuffer
             const arrayBuffer = await this.app.vault.adapter.readBinary(file.path);
-            
-            // Configure PDF.js worker
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
             
-            // Load PDF document
             const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
             const pdf = await loadingTask.promise;
             
             let fullText = '';
             
-            // Extract text from each page
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 try {
                     const page = await pdf.getPage(pageNum);
                     const textContent = await page.getTextContent();
                     
-                    // Combine text items with proper spacing
                     const pageText = textContent.items
-                        .map((item: any) => {
-                            if ('str' in item) {
-                                return item.str;
-                            }
-                            return '';
-                        })
+                        .map((item: any) => ('str' in item) ? item.str : '')
                         .join(' ');
                     
                     fullText += pageText + '\n\n';
                 } catch (pageError) {
                     console.error(`Error reading page ${pageNum}:`, pageError);
-                    // Continue with other pages
                 }
             }
             
             return fullText.trim();
         } catch (error) {
             console.error('PDF extraction error:', error);
-            throw new Error(`Failed to extract text from PDF: ${error.message}`);
+            throw new Error(`Failed to extract text from PDF: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
     async extractTextFromDOCX(file: TFile): Promise<string> {
         try {
-            // Get file as ArrayBuffer
             const arrayBuffer = await this.app.vault.adapter.readBinary(file.path);
+            const result = await mammoth.extractRawText({ arrayBuffer });
             
-            // Extract text using mammoth with ArrayBuffer directly
-            const result = await mammoth.extractRawText({ 
-                arrayBuffer: arrayBuffer 
-            });
-            
-            if (result.messages && result.messages.length > 0) {
+            if (result.messages?.length > 0) {
                 console.warn('DOCX extraction warnings:', result.messages);
             }
             
             return result.value;
         } catch (error) {
             console.error('DOCX extraction error:', error);
-            throw new Error(`Failed to extract text from DOCX: ${error.message}`);
+            throw new Error(`Failed to extract text from DOCX: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    async extractTextFromEPUB(file: TFile): Promise<string> {
+        try {
+            const arrayBuffer = await this.app.vault.adapter.readBinary(file.path);
+            
+            return new Promise(async (resolve, reject) => {
+                const tempDir = os.tmpdir();
+                const tempFilePath = path.join(tempDir, `temp_${Date.now()}.epub`);
+                
+                try {
+                    await fs.writeFile(tempFilePath, Buffer.from(arrayBuffer));
+                    const epub = new EPub(tempFilePath);
+                
+                    epub.on('error', (error: Error) => {
+                        console.error('EPUB parsing error:', error);
+                        reject(new Error(`Failed to parse EPUB: ${error.message}`));
+                    });
+
+                    epub.on('end', () => {
+                        const chapters = epub.flow;
+                        let fullText = '';
+                        let processedChapters = 0;
+                        
+                        if (chapters.length === 0) {
+                            resolve('');
+                            return;
+                        }
+                        
+                        chapters.forEach((chapter: any, index: number) => {
+                            epub.getChapter(chapter.id, (error: Error, text?: string) => {
+                                if (error) {
+                                    console.error(`Error reading chapter ${index}:`, error);
+                                } else if (text) {
+                                    const cleanText = text
+                                        .replace(/<[^>]*>/g, ' ')
+                                        .replace(/\s+/g, ' ')
+                                        .trim();
+                                    fullText += cleanText + '\n\n';
+                                }
+                                
+                                processedChapters++;
+                                if (processedChapters === chapters.length) {
+                                    resolve(fullText.trim());
+                                }
+                            });
+                        });
+                    });
+
+                    epub.parse();
+                    
+                    epub.on('end', async () => {
+                        try {
+                            await fs.unlink(tempFilePath);
+                        } catch (cleanupError) {
+                            console.error('Error cleaning up temp file:', cleanupError);
+                        }
+                    });
+                } catch (error) {
+                    console.error('EPUB extraction error:', error);
+                    reject(new Error(`Failed to extract text from EPUB: ${error instanceof Error ? error.message : String(error)}`));
+                    
+                    try {
+                        await fs.unlink(tempFilePath);
+                    } catch (cleanupError) {
+                        console.error('Error cleaning up temp file:', cleanupError);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('EPUB extraction error:', error);
+            throw new Error(`Failed to extract text from EPUB: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
     isSupportedFile(file: TFile): boolean {
-        const supportedExtensions = ['md', 'txt', 'pdf', 'docx'];
-        return supportedExtensions.includes(file.extension.toLowerCase());
+        const ext = file.extension.toLowerCase();
+        console.log('Checking file support for extension:', ext); // Debug log
+        return ['md', 'txt', 'pdf', 'docx', 'epub'].includes(ext);
     }
 
     onunload() {
@@ -192,9 +251,9 @@ class SpeedReaderModal extends Modal {
     private currentIndex: number = 0;
     private isPlaying: boolean = false;
     private intervalId: number | null = null;
-    private displayElement: HTMLDivElement;
-    private controlsElement: HTMLDivElement;
-    private progressElement: HTMLDivElement;
+    private displayElement!: HTMLDivElement;
+    private controlsElement!: HTMLDivElement;
+    private progressElement!: HTMLDivElement;
 
     constructor(app: App, plugin: SpeedReaderPlugin, settings: SpeedReaderSettings) {
         super(app);
@@ -209,7 +268,6 @@ class SpeedReaderModal extends Modal {
     }
 
     preprocessText(text: string): string[] {
-        // Clean and split text into words
         return text
             .replace(/\s+/g, ' ')
             .trim()
@@ -239,6 +297,9 @@ class SpeedReaderModal extends Modal {
                 case 'docx':
                     text = await this.plugin.extractTextFromDOCX(file);
                     break;
+                case 'epub':
+                    text = await this.plugin.extractTextFromEPUB(file);
+                    break;
                 default:
                     throw new Error(`Unsupported file type: ${extension}`);
             }
@@ -259,7 +320,7 @@ class SpeedReaderModal extends Modal {
             console.error('Error loading file:', error);
             infoElement.empty();
             infoElement.createEl('div', { 
-                text: `✗ Error: ${error.message}`,
+                text: `✗ Error: ${error instanceof Error ? error.message : String(error)}`,
                 cls: 'error-text'
             });
         }
@@ -270,30 +331,24 @@ class SpeedReaderModal extends Modal {
         contentEl.empty();
         contentEl.addClass('speed-reader-modal');
 
-        // Add CSS styles
         this.addStyles();
 
-        // Create header
         const headerEl = contentEl.createDiv('speed-reader-header');
         headerEl.createEl('h2', { text: 'Speed Reader' });
 
-        // Create display area
         this.displayElement = contentEl.createDiv('speed-reader-display');
         this.displayElement.createEl('div', { 
             text: 'Select text or load a file to start reading',
             cls: 'placeholder-text'
         });
 
-        // Create progress bar
         this.progressElement = contentEl.createDiv('speed-reader-progress');
         const progressBar = this.progressElement.createEl('div', { cls: 'progress-bar' });
         progressBar.createEl('div', { cls: 'progress-fill' });
 
-        // Create controls
         this.controlsElement = contentEl.createDiv('speed-reader-controls');
         this.createControls();
 
-        // Create file selection area
         const fileSelectionArea = contentEl.createDiv('speed-reader-file-selection');
         const fileButton = fileSelectionArea.createEl('button', {
             text: 'Select File from Vault',
@@ -308,7 +363,6 @@ class SpeedReaderModal extends Modal {
             }).open();
         });
 
-        // Create text input area
         const inputArea = contentEl.createDiv('speed-reader-input');
         const textInputHeader = inputArea.createEl('h3', { text: 'Or paste text directly:' });
         const textarea = inputArea.createEl('textarea', {
@@ -324,7 +378,6 @@ class SpeedReaderModal extends Modal {
             }
         });
 
-        // Initialize display if text is already set
         if (this.words.length > 0) {
             this.updateDisplay();
         }
@@ -374,7 +427,7 @@ class SpeedReaderModal extends Modal {
         }
 
         this.isPlaying = true;
-        const interval = 60000 / this.settings.wordsPerMinute; // Convert WPM to milliseconds
+        const interval = 60000 / this.settings.wordsPerMinute;
 
         this.intervalId = window.setInterval(() => {
             if (this.currentIndex >= this.words.length) {
@@ -407,7 +460,6 @@ class SpeedReaderModal extends Modal {
 
         this.displayElement.empty();
 
-        // Create word display
         const wordEl = this.displayElement.createEl('div', { cls: 'current-word' });
         
         if (this.currentIndex < this.words.length) {
@@ -416,14 +468,12 @@ class SpeedReaderModal extends Modal {
             wordEl.style.color = this.settings.highlightColor;
         }
 
-        // Update progress
         const progressFill = this.progressElement.querySelector('.progress-fill') as HTMLElement;
         if (progressFill) {
             const progress = (this.currentIndex / this.words.length) * 100;
             progressFill.style.width = `${progress}%`;
         }
 
-        // Show position info
         const infoEl = this.displayElement.createEl('div', { cls: 'position-info' });
         infoEl.textContent = `${this.currentIndex + 1} / ${this.words.length}`;
     }
@@ -449,7 +499,7 @@ class SpeedReaderModal extends Modal {
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                border: 2px solid var(--background-modifier-border);
+                border: 2px solid var--background-modifier-border);
                 border-radius: 8px;
                 margin-bottom: 20px;
                 background: var(--background-secondary);
@@ -654,8 +704,8 @@ class SpeedReaderSettingTab extends PluginSettingTab {
 
 class FileSelectionModal extends Modal {
     private callback: (file: TFile) => void;
-    private searchInput: HTMLInputElement;
-    private fileList: HTMLElement;
+    private searchInput!: HTMLInputElement;
+    private fileList!: HTMLElement;
     private allFiles: TFile[] = [];
     private filteredFiles: TFile[] = [];
 
@@ -669,11 +719,9 @@ class FileSelectionModal extends Modal {
         contentEl.empty();
         contentEl.addClass('file-selection-modal');
 
-        // Header
         const headerEl = contentEl.createDiv('file-selection-header');
         headerEl.createEl('h2', { text: 'Select File to Read' });
 
-        // Search input
         const searchContainer = contentEl.createDiv('search-container');
         this.searchInput = searchContainer.createEl('input', {
             type: 'text',
@@ -685,29 +733,20 @@ class FileSelectionModal extends Modal {
             this.filterFiles();
         });
 
-        // File list
         this.fileList = contentEl.createDiv('file-list');
-
-        // Load and display files
         this.loadFiles();
-
-        // Add styles
         this.addFileSelectionStyles();
-
-        // Focus search input
         setTimeout(() => this.searchInput.focus(), 100);
     }
 
     loadFiles() {
-        // Get all supported files from vault
         this.allFiles = this.app.vault.getFiles().filter(file => {
-            const supportedExtensions = ['md', 'txt', 'pdf', 'docx'];
-            return supportedExtensions.includes(file.extension.toLowerCase());
+            const ext = file.extension.toLowerCase();
+            console.log('FileSelectionModal checking extension:', ext); // Debug log
+            return ['md', 'txt', 'pdf', 'docx', 'epub'].includes(ext);
         });
 
-        // Sort by name
         this.allFiles.sort((a, b) => a.name.localeCompare(b.name));
-        
         this.filteredFiles = [...this.allFiles];
         this.displayFiles();
     }
@@ -771,6 +810,7 @@ class FileSelectionModal extends Modal {
             case 'txt': return '📄';
             case 'pdf': return '📕';
             case 'docx': return '📘';
+            case 'epub': return '📚';
             default: return '📄';
         }
     }
@@ -801,7 +841,7 @@ class FileSelectionModal extends Modal {
                 border: 1px solid var(--background-modifier-border);
                 border-radius: 6px;
                 background: var(--background-primary);
-                color: var(--text-normal);
+                color: var--text-normal);
                 font-size: 16px;
             }
             
@@ -832,7 +872,7 @@ class FileSelectionModal extends Modal {
             }
             
             .file-item:hover,
-            .file-item: focus {
+            .file-item:focus {
                 background: var(--background-modifier-hover);
                 outline: none;
             }
