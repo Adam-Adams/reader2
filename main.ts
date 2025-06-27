@@ -116,7 +116,7 @@ export default class SpeedReaderPlugin extends Plugin {
             let fullText = '';
             
             // Extract text from each page
-            for (let pageNum = 1; let pageNum <= pdf.numPages; pageNum++) {
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 try {
                     const page = await pdf.getPage(pageNum);
                     const textContent = await page.getTextContent();
@@ -150,11 +150,10 @@ export default class SpeedReaderPlugin extends Plugin {
             // Get file as ArrayBuffer
             const arrayBuffer = await this.app.vault.adapter.readBinary(file.path);
             
-            // Convert ArrayBuffer to Buffer for mammoth
-            const buffer = Buffer.from(arrayBuffer);
-            
-            // Extract text using mammoth
-            const result = await mammoth.extractRawText({ buffer });
+            // Extract text using mammoth with ArrayBuffer directly
+            const result = await mammoth.extractRawText({ 
+                arrayBuffer: arrayBuffer 
+            });
             
             if (result.messages && result.messages.length > 0) {
                 console.warn('DOCX extraction warnings:', result.messages);
@@ -833,7 +832,7 @@ class FileSelectionModal extends Modal {
             }
             
             .file-item:hover,
-            .file-item:focus {
+            .file-item: focus {
                 background: var(--background-modifier-hover);
                 outline: none;
             }
