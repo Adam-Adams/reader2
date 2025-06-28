@@ -28,8 +28,8 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
     windowState: {
         left: 'auto',
         top: 'auto', 
-        width: '600px',
-        height: 'auto'
+        width: '800px',
+        height: '675px'
     }
 };
 
@@ -344,6 +344,8 @@ class SpeedReaderModal extends Modal {
         contentEl.empty();
         contentEl.addClass('speed-reader-modal');
 
+        this.restoreWindowState();
+
         this.addStyles();
 
         const headerEl = contentEl.createDiv('speed-reader-header');
@@ -388,7 +390,10 @@ class SpeedReaderModal extends Modal {
         // Save state when window is resized using browser's native resize
         const modalContent = this.contentEl.parentElement as HTMLElement;
         const resizeObserver = new ResizeObserver(() => {
-            this.saveWindowState();
+            clearTimeout((this as any).saveTimeout);
+            (this as any).saveTimeout = setTimeout(() => {
+                this.saveWindowState();
+            }, 500);
         });
         resizeObserver.observe(modalContent);
 
@@ -410,10 +415,7 @@ class SpeedReaderModal extends Modal {
         if (this.words.length > 0) {
             this.updateDisplay();
         }
-        // Restore window state after DOM is ready
-        setTimeout(() => {
-            this.restoreWindowState();
-        }, 100);
+
     }
 
     createControls() {
@@ -635,21 +637,33 @@ class SpeedReaderModal extends Modal {
     private saveWindowState() {
         const modalContent = this.contentEl.parentElement as HTMLElement;
         const rect = modalContent.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(modalContent);
         
         this.settings.windowState = {
             left: modalContent.style.left || rect.left + 'px',
             top: modalContent.style.top || rect.top + 'px',
             width: modalContent.style.width || rect.width + 'px',
             height: modalContent.style.height || rect.height + 'px'
+            //width: computedStyle.width,
+            //height: computedStyle.height
         };
         
-        this.plugin.saveSettings();
+        // Dodaj await za sigurnost
+        this.plugin.saveSettings().catch(err => 
+            console.error('Failed to save window state:', err)
+        );
+
     }
 
     private restoreWindowState() {
         const modalContent = this.contentEl.parentElement as HTMLElement;
         const state = this.settings.windowState;
         
+        // Dodaj validaciju
+        if (!state || state.left === 'auto' || state.top === 'auto') {
+            return; // Ne pokušavaj da restituišeš ako nema validnih podataka
+        }
+
         // Apply saved dimensions and position
         if (state.width !== 'auto') {
             modalContent.style.width = state.width;
@@ -908,6 +922,11 @@ class SpeedReaderModal extends Modal {
 
     onClose() {
         this.pause();
+
+            if ((this as any).saveTimeout) {
+                clearTimeout((this as any).saveTimeout);
+            }
+
         this.saveWindowState();
         const { contentEl } = this;
         // Cleanup resize observer
