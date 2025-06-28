@@ -11,13 +11,26 @@ interface SpeedReaderSettings {
     highlightColor: string;
     chunkSize: number;
     autoAdvance: boolean;
+    windowState: {
+        left: string;
+        top: string;
+        width: string;
+        height: string;
+    };
+
 }
 
 const DEFAULT_SETTINGS: SpeedReaderSettings = {
     wordsPerMinute: 250,
     highlightColor: '#ff6b6b',
     chunkSize: 1,
-    autoAdvance: true
+    autoAdvance: true,
+    windowState: {
+        left: 'auto',
+        top: 'auto', 
+        width: '600px',
+        height: 'auto'
+    }
 };
 
 export default class SpeedReaderPlugin extends Plugin {
@@ -369,6 +382,22 @@ class SpeedReaderModal extends Modal {
             placeholder: 'Paste your text here...',
             cls: 'speed-reader-textarea'
         });
+        // Add resize handles
+        this.addResizeHandles();
+
+        // Save state when window is resized using browser's native resize
+        const modalContent = this.contentEl.parentElement as HTMLElement;
+        const resizeObserver = new ResizeObserver(() => {
+            this.saveWindowState();
+        });
+        resizeObserver.observe(modalContent);
+
+        // Store observer for cleanup
+        (this as any).resizeObserver = resizeObserver;
+
+        // Add drag functionality to header
+        headerEl.addClass('modal-draggable');
+        this.makeDraggable(headerEl);
 
         textarea.addEventListener('input', (e) => {
             const target = e.target as HTMLTextAreaElement;
@@ -381,6 +410,10 @@ class SpeedReaderModal extends Modal {
         if (this.words.length > 0) {
             this.updateDisplay();
         }
+        // Restore window state after DOM is ready
+        setTimeout(() => {
+            this.restoreWindowState();
+        }, 100);
     }
 
     createControls() {
@@ -477,6 +510,191 @@ class SpeedReaderModal extends Modal {
         const infoEl = this.displayElement.createEl('div', { cls: 'position-info' });
         infoEl.textContent = `${this.currentIndex + 1} / ${this.words.length}`;
     }
+    private addResizeHandles() {
+        const modalContent = this.contentEl.parentElement as HTMLElement;
+        
+        // Right handle
+        const rightHandle = modalContent.createDiv('resize-handle resize-handle-right');
+        this.makeResizable(rightHandle, 'right');
+        
+        // Bottom handle
+        const bottomHandle = modalContent.createDiv('resize-handle resize-handle-bottom');
+        this.makeResizable(bottomHandle, 'bottom');
+        
+        // Corner handle
+        const cornerHandle = modalContent.createDiv('resize-handle resize-handle-corner');
+        this.makeResizable(cornerHandle, 'corner');
+    }
+
+    private makeResizable(handle: HTMLElement, direction: 'right' | 'bottom' | 'corner') {
+        let isResizing = false;
+        let startX = 0;
+        let startY = 0;
+        let startWidth = 0;
+        let startHeight = 0;
+        
+        const modalContent = this.contentEl.parentElement as HTMLElement;
+        
+        handle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = parseInt(window.getComputedStyle(modalContent).width, 10);
+            startHeight = parseInt(window.getComputedStyle(modalContent).height, 10);
+            
+            e.preventDefault();
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+        
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            if (direction === 'right' || direction === 'corner') {
+                const newWidth = Math.max(400, startWidth + deltaX);
+                modalContent.style.width = newWidth + 'px';
+            }
+            
+            if (direction === 'bottom' || direction === 'corner') {
+                const newHeight = Math.max(300, startHeight + deltaY);
+                modalContent.style.height = newHeight + 'px';
+            }
+        };
+        
+        const handleMouseUp = () => {
+            if (isResizing) {
+                this.saveWindowState();
+            }
+            isResizing = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+    }
+
+    private makeDraggable(handle: HTMLElement) {
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let startLeft = 0;
+        let startTop = 0;
+        
+        const modalContent = this.contentEl.parentElement as HTMLElement;
+        
+        handle.addEventListener('mousedown', (e) => {
+            // Don't drag if clicking on buttons or inputs
+            if ((e.target as HTMLElement).tagName === 'BUTTON' || 
+                (e.target as HTMLElement).tagName === 'INPUT') {
+                return;
+            }
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            const rect = modalContent.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            
+            modalContent.style.position = 'fixed';
+            modalContent.style.left = startLeft + 'px';
+            modalContent.style.top = startTop + 'px';
+            modalContent.style.margin = '0';
+            
+            e.preventDefault();
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+        
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const newLeft = Math.max(0, Math.min(window.innerWidth - 400, startLeft + deltaX));
+            const newTop = Math.max(0, Math.min(window.innerHeight - 300, startTop + deltaY));
+            
+            modalContent.style.left = newLeft + 'px';
+            modalContent.style.top = newTop + 'px';
+        };
+        
+        const handleMouseUp = () => {
+            if (isDragging) {
+                this.saveWindowState();
+            }
+            isDragging = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }
+
+    private saveWindowState() {
+        const modalContent = this.contentEl.parentElement as HTMLElement;
+        const rect = modalContent.getBoundingClientRect();
+        
+        this.settings.windowState = {
+            left: modalContent.style.left || rect.left + 'px',
+            top: modalContent.style.top || rect.top + 'px',
+            width: modalContent.style.width || rect.width + 'px',
+            height: modalContent.style.height || rect.height + 'px'
+        };
+        
+        this.plugin.saveSettings();
+    }
+
+    private restoreWindowState() {
+        const modalContent = this.contentEl.parentElement as HTMLElement;
+        const state = this.settings.windowState;
+        
+        // Apply saved dimensions and position
+        if (state.width !== 'auto') {
+            modalContent.style.width = state.width;
+        }
+        if (state.height !== 'auto') {
+            modalContent.style.height = state.height;
+        }
+        
+        // Position the modal if saved position exists
+        if (state.left !== 'auto' && state.top !== 'auto') {
+            modalContent.style.position = 'fixed';
+            modalContent.style.left = state.left;
+            modalContent.style.top = state.top;
+            modalContent.style.margin = '0';
+            
+            // Ensure modal is still visible on screen
+            this.ensureModalVisible(modalContent);
+        }
+    }
+
+    private ensureModalVisible(modalContent: HTMLElement) {
+        const rect = modalContent.getBoundingClientRect();
+        const viewWidth = window.innerWidth;
+        const viewHeight = window.innerHeight;
+        
+        let left = rect.left;
+        let top = rect.top;
+        
+        // Adjust if modal is outside viewport
+        if (left + rect.width > viewWidth) {
+            left = viewWidth - rect.width - 20;
+        }
+        if (left < 0) {
+            left = 20;
+        }
+        if (top + rect.height > viewHeight) {
+            top = viewHeight - rect.height - 20;
+        }
+        if (top < 0) {
+            top = 20;
+        }
+        
+        modalContent.style.left = left + 'px';
+        modalContent.style.top = top + 'px';
+    }
 
     addStyles() {
         const style = document.createElement('style');
@@ -484,6 +702,8 @@ class SpeedReaderModal extends Modal {
             .speed-reader-modal {
                 width: 600px;
                 max-width: 90vw;
+                max-height: 90vh;
+                position: relative;
             }
             
             .speed-reader-header {
@@ -632,13 +852,68 @@ class SpeedReaderModal extends Modal {
                 resize: vertical;
                 font-family: var(--font-monospace);
             }
+            
+            .speed-reader-modal .modal-content {
+                min-width: 400px;
+                min-height: 300px;
+                max-width: none;
+                max-height: none;
+                position: relative;
+                resize: both;
+                overflow: auto;
+            }
+            .resize-handle {
+                position: absolute;
+                background: var(--interactive-accent);
+                opacity: 0.3;
+                transition: opacity 0.2s;
+            }
+
+            .resize-handle:hover {
+                opacity: 0.7;
+            }
+
+            .resize-handle-right {
+                top: 0;
+                right: 0;
+                width: 4px;
+                height: 100%;
+                cursor: e-resize;
+            }
+
+            .resize-handle-bottom {
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 4px;
+                cursor: s-resize;
+            }
+
+            .resize-handle-corner {
+                bottom: 0;
+                right: 0;
+                width: 12px;
+                height: 12px;
+                cursor: se-resize;
+                background: var(--interactive-accent);
+                opacity: 0.5;
+            }
+
+            .modal-draggable {
+                cursor: move;
+            }
         `;
         document.head.appendChild(style);
     }
 
     onClose() {
         this.pause();
+        this.saveWindowState();
         const { contentEl } = this;
+        // Cleanup resize observer
+        if ((this as any).resizeObserver) {
+            (this as any).resizeObserver.disconnect();
+        }
         contentEl.empty();
     }
 }
