@@ -25,6 +25,11 @@ export class SpeedReaderModal extends Modal {
         this.text = text;
         this.words = this.preprocessText(text);
         this.currentIndex = 0;
+        
+        // KRITIČNA ISPRAVKA: Ažuriraj display odmah kada se postavi tekst
+        setTimeout(() => {
+            this.updateDisplay();
+        }, 100); // Kratka pauza da se osigura da su elementi kreirani
     }
 
     preprocessText(text: string): string[] {
@@ -74,7 +79,7 @@ export class SpeedReaderModal extends Modal {
 
         this.restoreWindowState();
 
-        // Load CSS styles from external file
+        // Load CSS styles from external file 
         const cssPath = this.plugin.app.vault.adapter.getResourcePath('styles.css');
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -252,32 +257,76 @@ export class SpeedReaderModal extends Modal {
         this.updateDisplay();
     }
 
-    updateDisplay() {
-        if (this.words.length === 0) return;
-
-        this.displayElement.empty();
-
-        const wordEl = this.displayElement.createEl('div', { cls: 'current-word' });
-        
-        if (this.currentIndex < this.words.length) {
-            const chunk = [];
-            for (let i = 0; i < this.settings.chunkSize && (this.currentIndex + i) < this.words.length; i++) {
-                chunk.push(this.words[this.currentIndex + i]);
+    // Dodana zasebna metoda za ažuriranje progress bar-a
+    private updateProgressBar() {
+        if (this.words.length === 0) {
+            const progressFill = this.progressElement?.querySelector('.progress-fill') as HTMLElement;
+            if (progressFill) {
+                progressFill.style.width = '0%';
             }
-            
-            wordEl.textContent = chunk.join(' ');
-            wordEl.style.color = this.settings.highlightColor;
+            return;
         }
 
-        const progressFill = this.progressElement.querySelector('.progress-fill') as HTMLElement;
+        const progressFill = this.progressElement?.querySelector('.progress-fill') as HTMLElement;
         if (progressFill) {
-            const progress = (this.currentIndex / this.words.length) * 100;
+            // Ispravka: koristimo Math.min da osiguramo da progress ne prelazi 100%
+            const progress = Math.min(100, (this.currentIndex / this.words.length) * 100);
             progressFill.style.width = `${progress}%`;
+            
+            // Dodaj transition za glatko animiranje
+            progressFill.style.transition = 'width 0.1s ease-out';
         }
-
-        const infoEl = this.displayElement.createEl('div', { cls: 'position-info' });
-        infoEl.textContent = `${Math.min(this.currentIndex + this.settings.chunkSize, this.words.length)} / ${this.words.length}`;
     }
+
+updateDisplay() {
+    if (this.words.length === 0) {
+        // Ako nema reči, sakrij progress bar
+        const progressFill = this.progressElement?.querySelector('.progress-fill') as HTMLElement;
+        if (progressFill) {
+            progressFill.style.width = '0%';
+        }
+        return;
+    }
+
+    this.displayElement.empty();
+
+    const wordEl = this.displayElement.createEl('div', { cls: 'current-word' });
+    
+    if (this.currentIndex < this.words.length) {
+        const chunk = [];
+        for (let i = 0; i < this.settings.chunkSize && (this.currentIndex + i) < this.words.length; i++) {
+            chunk.push(this.words[this.currentIndex + i]);
+        }
+        
+        wordEl.textContent = chunk.join(' ');
+        wordEl.style.color = this.settings.highlightColor;
+    } else {
+        wordEl.textContent = 'Reading complete!';
+        wordEl.style.color = this.settings.highlightColor;
+    }
+
+    // KRITIČNA ISPRAVKA: Dodaj proveру da li progressElement postoji
+    const progressFill = this.progressElement?.querySelector('.progress-fill') as HTMLElement;
+    if (progressFill) {
+        // Ispravka: koristimo Math.min da ne prelazimo 100%
+        const progress = Math.min(100, (this.currentIndex / this.words.length) * 100);
+        progressFill.style.width = `${Math.floor(progress)}%`;
+        
+        // Dodaj transition za glatko kretanje
+        if (!progressFill.style.transition) {
+            progressFill.style.transition = 'width 0.2s ease-out';
+        }
+        
+        // Debug log - možeš obrisati posle testiranja
+        console.log(`Progress: ${this.currentIndex}/${this.words.length} = ${Math.floor(progress)}%`);
+    } else {
+        console.log('Progress fill element not found!');
+    }
+
+    const infoEl = this.displayElement.createEl('div', { cls: 'position-info' });
+    const displayedWords = Math.min(this.currentIndex + this.settings.chunkSize, this.words.length);
+    infoEl.textContent = `${displayedWords} / ${this.words.length} words`;
+}
 
     private addResizeHandles() {
         const modalContent = this.contentEl.parentElement as HTMLElement;

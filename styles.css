@@ -40,7 +40,7 @@
     font-style: italic;
 }
 
-.speed-reader-progress {
+/* .speed-reader-progress {
     margin-bottom: 20px;
 }
 
@@ -57,6 +57,33 @@
     background: var(--interactive-accent);
     transition: width 0.3s ease;
     width: 0%;
+} */
+
+.speed-reader-progress {
+    margin: 10px 0;
+    width: 100%;
+    height: 20px;
+    background-color: var(--background-modifier-border);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 100%;
+    background-color: var(--background-modifier-border);
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--interactive-accent);
+    width: 0%;
+    transition: width 0.2s ease-out;
+    border-radius: 10px;
+    /* Ispravka za ispunjavanje sa leva na desno */
+    transform-origin: left center;
 }
 
 .speed-reader-controls {
