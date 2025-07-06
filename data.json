@@ -1,12 +1,12 @@
 {
-  "wordsPerMinute": 250,
+  "wordsPerMinute": 500,
   "highlightColor": "#ff6b6b",
-  "chunkSize": 1,
+  "chunkSize": 3,
   "autoAdvance": true,
   "windowState": {
-    "left": "124px",
-    "top": "136.387px",
-    "width": "779px",
-    "height": "538px"
+    "left": "318px",
+    "top": "80.5125px",
+    "width": "803px",
+    "height": "658px"
   }
 }
