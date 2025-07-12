@@ -2,6 +2,7 @@ import { App, Modal, TFile, Notice } from 'obsidian';
 import { SpeedReaderSettings } from './main';
 import { FileHandler } from './fileHandler';
 import { FileSelectionModal } from './fileSelectionModal';
+import { TextInputModal } from './textInputModal';
 
 export class SpeedReaderModal extends Modal {
     private plugin: any; // SpeedReaderPlugin type
@@ -111,16 +112,35 @@ export class SpeedReaderModal extends Modal {
         const selectedFileInfo = fileSelectionArea.createDiv('selected-file-info');
 
         fileButton.addEventListener('click', () => {
-            new FileSelectionModal(this.app, this.plugin.fileHandler, (file) => {
-                this.loadFileContent(file, selectedFileInfo);
-            }).open();
+            new FileSelectionModal(
+                this.app, 
+                this.plugin.fileHandler, 
+                (file) => {
+                    this.loadFileContent(file, selectedFileInfo);
+                }, 
+                this.plugin, 
+                this.settings.fileSelectionModalSettings || {
+                    windowState: {
+                        left: 'auto',
+                        top: 'auto',
+                        width: '600px',
+                        height: '500px'
+                    }
+                }
+            ).open();
         });
 
-        const inputArea = contentEl.createDiv('speed-reader-input');
-        const textInputHeader = inputArea.createEl('h3', { text: 'Or paste text directly:' });
-        const textarea = inputArea.createEl('textarea', {
-            placeholder: 'Paste your text here...',
-            cls: 'speed-reader-textarea'
+        const textInputArea = contentEl.createDiv('speed-reader-text-input');
+        const textInputButton = textInputArea.createEl('button', {
+            text: 'Enter Text Manually',
+            cls: 'speed-reader-btn text-input-btn'
+        });
+
+        textInputButton.addEventListener('click', () => {
+            new TextInputModal(this.app, (text) => {
+                this.setText(text);
+                this.updateDisplay();
+            }, this.plugin, this.plugin.settings.textInputModalSettings).open();
         });
 
         this.addResizeHandles();
@@ -138,14 +158,6 @@ export class SpeedReaderModal extends Modal {
 
         headerEl.addClass('modal-draggable');
         this.makeDraggable(headerEl);
-
-        textarea.addEventListener('input', (e) => {
-            const target = e.target as HTMLTextAreaElement;
-            if (target.value.trim()) {
-                this.setText(target.value);
-                this.updateDisplay();
-            }
-        });
 
         if (this.words.length > 0) {
             this.updateDisplay();

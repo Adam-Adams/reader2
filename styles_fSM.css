@@ -1,0 +1,326 @@
+/* Forsiraj maksimalnu visinu */
+.modal-container .file-selection-modal {
+    max-height: 95vh !important;
+}
+
+/* File Selection Modal Styles */
+.file-selection-modal {
+    max-width: 840px;
+    width: 90vw;
+    min-width: 450px;
+    max-height: 95vh;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    animation: modalSlideIn 0.2s ease-out;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.file-selection-modal > * {
+    flex-shrink: 0;
+}
+
+.file-selection-modal .file-list {
+    flex-shrink: 1 !important; /* Samo file-list može da se smanji */
+}
+
+.file-selection-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    border-radius: 8px 8px 0 0;
+    cursor: move;
+    user-select: none;
+    flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.file-selection-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.search-container {
+    padding: 16px 20px;
+    background: var(--background-primary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.file-search-input {
+    width: calc(100% - 40px);
+    max-width: calc(100% - 40px);
+    min-width: 200px;
+    padding: 8px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+    margin: 0 auto;
+    display: block;
+}
+
+.file-search-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+
+.file-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+    background: var(--background-primary);
+    border-radius: 0 0 8px 8px;
+    min-height: 150px;
+    max-height: 400px;
+    width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 1;
+    overflow: hidden;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border: 2px solid transparent;
+    margin: 1px 8px;
+    border-radius: 4px;
+    gap: 12px;
+    min-height: 40px;
+    width: calc(100% - 16px);
+    box-sizing: border-box;
+}
+
+.file-item:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.file-item:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    background-color: var(--background-modifier-hover);
+}
+
+.file-item.selected {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+.file-item.selected .file-name {
+    color: var(--text-on-accent);
+    font-weight: 500;
+}
+
+.file-item.selected .file-path {
+    color: var(--text-on-accent);
+    opacity: 0.8;
+}
+
+.file-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.file-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+    width: 100%;
+}
+
+.file-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-normal);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+.file-path {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+.no-files-message {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* Resize handles */
+.resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 10;
+}
+
+.resize-handle-right {
+    right: 0;
+    top: 0;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+}
+
+.resize-handle-bottom {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    cursor: ns-resize;
+}
+
+.resize-handle-corner {
+    right: 0;
+    bottom: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nw-resize;
+}
+
+.resize-handle-corner::after {
+    content: '';
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 0 8px 8px;
+    border-color: transparent transparent var(--text-muted) transparent;
+    opacity: 0.5;
+}
+
+/* Draggable header indicator */
+.modal-draggable {
+    position: relative;
+}
+
+.modal-draggable::after {
+    content: '⋮⋮';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 2px;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Scrollbar styling */
+.file-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.file-list::-webkit-scrollbar-track {
+    background: var(--background-secondary);
+}
+
+.file-list::-webkit-scrollbar-thumb {
+    background: var(--background-modifier-border);
+    border-radius: 4px;
+}
+
+.file-list::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .file-selection-modal {
+        width: 95vw;
+        min-width: 450px;
+        max-height: 95vh;
+    }
+    
+    .file-selection-header,
+    .search-container {
+        padding: 12px 16px;
+    }
+    
+    .file-item {
+        padding: 10px 16px;
+        margin: 1px 4px;
+    }
+    
+    .file-content {
+        gap: 1px;
+    }
+}
+
+@media (max-width: 480px) {
+    .file-selection-modal {
+        width: 98vw;
+        min-width: 450px;
+        max-height: 95vh;
+    }
+    
+    .file-selection-header,
+    .search-container {
+        padding: 10px 12px;
+    }
+    
+    .file-item {
+        padding: 8px 12px;
+        margin: 1px 2px;
+        gap: 8px;
+    }
+    
+    .file-name {
+        font-size: 13px;
+    }
+    
+    .file-path {
+        font-size: 11px;
+    }
+}
+
+/* Handle very wide screens */
+@media (min-width: 1200px) {
+    .file-selection-modal {
+        max-width: 840px;
+        max-height: 95vh;
+    }
+}
+
+/* Animation for modal appearance */
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

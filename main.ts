@@ -2,6 +2,8 @@ import { App, Plugin, PluginSettingTab, Setting, TFile, Notice } from 'obsidian'
 import { FileHandler } from './fileHandler';
 import { SpeedReaderModal } from './speedReaderModal';
 import { SpeedReaderSettingTab } from './speedReaderSettingTab';
+import { TextInputModalSettings } from './textInputModal';
+import { FileSelectionModalSettings } from './fileSelectionModal';
 
 export interface SpeedReaderSettings {
     wordsPerMinute: number;
@@ -14,6 +16,8 @@ export interface SpeedReaderSettings {
         width: string;
         height: string;
     };
+    textInputModalSettings?: TextInputModalSettings;
+    fileSelectionModalSettings?: FileSelectionModalSettings;
 }
 
 const DEFAULT_SETTINGS: SpeedReaderSettings = {
@@ -26,6 +30,22 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
         top: 'auto', 
         width: '800px',
         height: '675px'
+    },
+    textInputModalSettings: {
+        windowState: {
+            left: 'auto',
+            top: 'auto',
+            width: '500px',
+            height: '400px'
+        }
+    },
+    fileSelectionModalSettings: {
+        windowState: {
+            left: 'auto',
+            top: 'auto',
+            width: '600px',
+            height: '500px'
+        }
     }
 };
 

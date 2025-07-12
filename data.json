@@ -1,12 +1,28 @@
 {
-  "wordsPerMinute": 5000,
+  "wordsPerMinute": 500,
   "highlightColor": "#ff6b6b",
   "chunkSize": 3,
   "autoAdvance": true,
   "windowState": {
-    "left": "318px",
-    "top": "80.5125px",
-    "width": "803px",
-    "height": "658px"
+    "left": "56px",
+    "top": "79.5125px",
+    "width": "850px",
+    "height": "619px"
+  },
+  "textInputModalSettings": {
+    "windowState": {
+      "left": "76px",
+      "top": "36px",
+      "width": "737px",
+      "height": "595px"
+    }
+  },
+  "fileSelectionModalSettings": {
+    "windowState": {
+      "left": "223.2px",
+      "top": "20px",
+      "width": "840px",
+      "height": "775.2px"
+    }
   }
 }
