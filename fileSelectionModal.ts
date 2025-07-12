@@ -38,14 +38,16 @@ export class FileSelectionModal extends Modal {
         contentEl.empty();
         contentEl.addClass('file-selection-modal');
 
-        // Restore window state first
-        this.restoreWindowState();
-
-        // DODAJTE OVO: Postavite početnu maksimalnu visinu
+        // Uvek postavi modal na position: fixed
         const modalContent = contentEl.parentElement as HTMLElement;
         if (modalContent) {
+            modalContent.style.position = 'fixed';
             modalContent.style.maxHeight = `${window.innerHeight * 0.95}px`;
+            modalContent.style.margin = '0';
         }
+
+        // Restore window state first
+        this.restoreWindowState();
         
         const headerEl = contentEl.createDiv('file-selection-header');
         headerEl.createEl('h2', { text: 'Select File to Read' });
@@ -641,55 +643,73 @@ private updateFileListHeight() {
     private restoreWindowState() {
         const modalContent = this.contentEl.parentElement as HTMLElement;
         const state = this.settings.windowState;
-        
         if (!state || state.left === 'auto' || state.top === 'auto') {
             return;
         }
 
+        // Ograniči širinu/visinu na dozvoljene vrednosti
+        const minWidth = 450;
+        const maxWidth = 840;
+        const minHeight = 300;
+        const maxHeight = window.innerHeight * 0.95;
+
         if (state.width !== 'auto') {
-            modalContent.style.width = state.width;
+            let requestedWidth = parseInt(state.width);
+            requestedWidth = Math.max(minWidth, Math.min(maxWidth, requestedWidth));
+            modalContent.style.width = `${requestedWidth}px`;
         }
         if (state.height !== 'auto') {
-            //modalContent.style.height = state.height;
-            const maxHeight = window.innerHeight * 0.95;
-            const requestedHeight = parseInt(state.height);
-            const finalHeight = Math.min(maxHeight, requestedHeight);
-            modalContent.style.height = `${finalHeight}px`;        
+            let requestedHeight = parseInt(state.height);
+            requestedHeight = Math.max(minHeight, Math.min(maxHeight, requestedHeight));
+            modalContent.style.height = `${requestedHeight}px`;
         }
-        
+
         if (state.left !== 'auto' && state.top !== 'auto') {
             modalContent.style.position = 'fixed';
             modalContent.style.left = state.left;
             modalContent.style.top = state.top;
             modalContent.style.margin = '0';
-            
-            this.ensureModalVisible(modalContent);
+            this.ensureModalWithinViewport();
         }
     }
 
     private ensureModalVisible(modalContent: HTMLElement) {
-        const rect = modalContent.getBoundingClientRect();
+        // Sada ne koristi argument, već uvek koristi parent modal
+        const modal = this.contentEl.parentElement as HTMLElement;
+        const rect = modal.getBoundingClientRect();
         const viewWidth = window.innerWidth;
         const viewHeight = window.innerHeight;
-        
+
         let left = rect.left;
         let top = rect.top;
-        
-        if (left + rect.width > viewWidth) {
-            left = viewWidth - rect.width - 20;
+        let width = rect.width;
+        let height = rect.height;
+
+        // Ograniči širinu/visinu
+        const minWidth = 450;
+        const maxWidth = 840;
+        const minHeight = 300;
+        const maxHeight = viewHeight * 0.95;
+        width = Math.max(minWidth, Math.min(maxWidth, width));
+        height = Math.max(minHeight, Math.min(maxHeight, height));
+        modal.style.width = `${width}px`;
+        modal.style.height = `${height}px`;
+
+        // Ograniči poziciju
+        if (left + width > viewWidth) {
+            left = viewWidth - width - 20;
         }
-        if (left < 0) {
+        if (left < 20) {
             left = 20;
         }
-        if (top + rect.height > viewHeight) {
-            top = viewHeight - rect.height - 20;
+        if (top + height > viewHeight) {
+            top = viewHeight - height - 20;
         }
-        if (top < 0) {
+        if (top < 20) {
             top = 20;
         }
-        
-        modalContent.style.left = left + 'px';
-        modalContent.style.top = top + 'px';
+        modal.style.left = left + 'px';
+        modal.style.top = top + 'px';
     }
 
     onClose() {

@@ -11,10 +11,10 @@
   },
   "textInputModalSettings": {
     "windowState": {
-      "left": "76px",
-      "top": "36px",
-      "width": "737px",
-      "height": "595px"
+      "left": "50px",
+      "top": "20px",
+      "width": "1228px",
+      "height": "775.2px"
     }
   },
   "fileSelectionModalSettings": {
@@ -22,7 +22,7 @@
       "left": "223.2px",
       "top": "20px",
       "width": "840px",
-      "height": "775.2px"
+      "height": "775px"
     }
   }
 }
