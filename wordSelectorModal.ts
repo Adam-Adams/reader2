@@ -33,7 +33,8 @@ export class WordSelectorModal extends Modal {
     private visibleEndIndex = 0;
     private totalLines = 0;
     private lines: string[] = [];
-    private lineWordMappings: { start: number; end: number; text: string }[] = [];
+    //private lineWordMappings: { start: number; end: number; text: string }[] = [];
+    private lineWordMappings: { start: number; end: number; text: string; height: number; top: number }[] = [];
     private scrollPosition = 0;
     private renderBuffer = 5; // Broj dodatnih linija za renderovanje
     
@@ -67,35 +68,41 @@ export class WordSelectorModal extends Modal {
         this.lines = this.text.split('\n');
         this.totalLines = this.lines.length;
         
-        // Mapiranje reči po linijama
+        // Dodaj debouncing za performanse
+        this.lineWordMappings = [];
+        
         let globalWordIndex = 0;
         let cumulativeHeight = 0;
         
-        this.lineWordMappings = this.lines.map((line, index) => {
+        // Koristi stvarnu širinu kontejnera
+        const modalContent = this.contentEl.parentElement as HTMLElement;
+        const modalWidth = modalContent?.clientWidth || 600;
+        const containerWidth = this.textContainer?.clientWidth || 
+                              Math.max(200, modalWidth - 80); // dodaj minimum        
+        
+        this.lines.forEach((line, index) => {
             const wordsInLine = line.trim().split(/\s+/).filter(word => word.length > 0);
             const start = globalWordIndex;
             const end = globalWordIndex + wordsInLine.length - 1;
             globalWordIndex += wordsInLine.length;
             
-            // Izračunaj visinu linije
-            const containerWidth = this.textContainer?.clientWidth || 600;
+            // Preciznije izračunavanje visine
             const lineHeight = this.calculateLineHeight(line, containerWidth);
             
-            const mapping = {
+            this.lineWordMappings.push({
                 start,
                 end,
                 text: line,
                 height: lineHeight,
                 top: cumulativeHeight
-            };
+            });
             
             cumulativeHeight += lineHeight;
-            return mapping;
         });
         
-        // Ažuriraj ukupnu visinu
         this.totalHeight = cumulativeHeight;
     }
+
     private updateElementSizes() {
         const modalContent = this.contentEl.parentElement as HTMLElement;
         if (!modalContent) return;
@@ -104,29 +111,29 @@ export class WordSelectorModal extends Modal {
         const contentWidth = modalRect.width;
         const contentHeight = modalRect.height;
         
-        const CONTENT_PADDING = 40;
-        const ELEMENT_MARGIN = 10;
-        const HEADER_HEIGHT = 60;
+        // Postojeći kod za header i textContainer...
         
-        if (this.headerEl) {
-            this.headerEl.style.width = `${contentWidth - (CONTENT_PADDING * 2)}px`;
-            this.headerEl.style.height = `${HEADER_HEIGHT}px`;
-            this.headerEl.style.marginBottom = `${ELEMENT_MARGIN}px`;
-            this.headerEl.style.padding = `${ELEMENT_MARGIN}px`;
-            this.headerEl.style.boxSizing = 'border-box';
-        }
-
         if (this.textContainer) {
-            const availableHeight = contentHeight - HEADER_HEIGHT - (CONTENT_PADDING * 2) - (ELEMENT_MARGIN * 2);
-            this.textContainer.style.width = `${contentWidth - (CONTENT_PADDING * 2)}px`;
+            //const availableHeight = contentHeight - 60 - 80 - 20; // header + padding + margin
+            const headerHeight = this.headerEl?.offsetHeight || 60;
+            const availableHeight = contentHeight - headerHeight - 40 - 20; // tačna visina header-a + padding + margin
+            const maxWidth = contentWidth - 60; // povećaj margine
+            this.textContainer.style.width = `${maxWidth}px`;
+            this.textContainer.style.maxWidth = `${maxWidth}px`;
             this.textContainer.style.height = `${Math.max(200, availableHeight)}px`;
-            this.textContainer.style.padding = `${ELEMENT_MARGIN}px`;
+            this.textContainer.style.padding = '10px';
             this.textContainer.style.boxSizing = 'border-box';
-            this.textContainer.style.maxWidth = `${contentWidth - (CONTENT_PADDING * 2)}px`;
 
-            // Preračunaj vidljive linije
+            // KLJUČNO: Rekalkuliši virtualizaciju sa novim dimenzijama
+            this.prepareVirtualization();
+            this.createVirtualContainer();
             this.calculateVisibleRange();
             this.requestRender();
+            
+            // Skroluj do trenutne reči
+            setTimeout(() => {
+                this.scrollToCurrentWord();
+            }, 100);
         }
     }
 
@@ -151,6 +158,7 @@ export class WordSelectorModal extends Modal {
         this.contentEl.style.padding = '20px';
         this.contentEl.style.boxSizing = 'border-box';
         this.contentEl.style.overflow = 'hidden';
+        this.contentEl.style.maxWidth = '100%';
     }
 
     private calculateVisibleRange() {
@@ -212,66 +220,57 @@ export class WordSelectorModal extends Modal {
         const lineDiv = document.createElement('div');
         lineDiv.className = 'word-selector-line';
         lineDiv.style.position = 'absolute';
-        //lineDiv.style.top = `${lineIndex * this.lineHeight}px`;
-        lineDiv.style.top = `${lineMapping.top}px`; // koristi dinamičku poziciju
+        lineDiv.style.top = `${lineMapping.top}px`;
         lineDiv.style.left = '0';
         lineDiv.style.right = '0';
-        //lineDiv.style.height = `${this.lineHeight}px`;
-        lineDiv.style.minHeight = `${lineMapping.height}px`; // koristi dinamičku visinu
-        lineDiv.style.display = 'block'; // PROMENI sa 'flex' na 'block'
-        lineDiv.style.alignItems = 'center';
+        lineDiv.style.height = `${lineMapping.height}px`; // PROMENI: koristi tačnu visinu
+        lineDiv.style.minHeight = `${lineMapping.height}px`;
+        lineDiv.style.display = 'block';
         lineDiv.style.paddingLeft = '8px';
         lineDiv.style.paddingRight = '8px';
+        lineDiv.style.paddingTop = '2px'; // DODAJ
+        lineDiv.style.paddingBottom = '2px'; // DODAJ
+        lineDiv.style.marginBottom = '1px';
         lineDiv.style.lineHeight = '1.4';
         lineDiv.style.boxSizing = 'border-box';
-        
-        // DODAJ OVE LINIJE ZA PRELAMANJE TEKSTA:
         lineDiv.style.wordWrap = 'break-word';
         lineDiv.style.overflowWrap = 'break-word';
-        lineDiv.style.wordBreak = 'break-word';
-        lineDiv.style.overflow = 'visible'; // PROMENI sa 'hidden' na 'visible'
-        lineDiv.style.textOverflow = 'ellipsis';
-        // lineDiv.style.textOverflow = 'ellipsis'; // UKLONI OVU LINIJU
-        // lineDiv.style.whiteSpace = 'nowrap'; // UKLONI OVU LINIJU
-        lineDiv.style.whiteSpace = 'normal'; // DODAJ OVU LINIJU
-
-        // Parsiraj reči u liniji
+        lineDiv.style.whiteSpace = 'normal';
+        lineDiv.style.overflow = 'hidden'; // PROMENI nazad na 'hidden' da spreči preklapanje
+        lineDiv.style.fontSize = '14px'; // EKSPLICITNO POSTAVI
+        lineDiv.style.fontFamily = 'inherit'; // DODAJ
+        
+        // Ostatak koda ostaje isti...
         const line = lineMapping.text;
         const wordsInLine = line.trim().split(/(\s+)/).filter(part => part.length > 0);
         let wordIndexInLine = 0;
         
         wordsInLine.forEach(part => {
             if (/^\s+$/.test(part)) {
-                // Whitespace
                 const spaceSpan = document.createElement('span');
                 spaceSpan.textContent = ' ';
                 lineDiv.appendChild(spaceSpan);
             } else if (part.trim().length > 0) {
-                // Word
                 const wordSpan = document.createElement('span');
                 wordSpan.textContent = part;
                 wordSpan.className = 'word-selector-word';
                 
-                // Stilizuj reč
+                // Isti stilovi kao pre...
                 wordSpan.style.cursor = 'pointer';
                 wordSpan.style.padding = '1px 2px';
                 wordSpan.style.margin = '0';
                 wordSpan.style.borderRadius = '3px';
                 wordSpan.style.transition = 'all 0.2s ease';
                 wordSpan.style.display = 'inline';
-
-                // Prelamanje reda
                 wordSpan.style.maxWidth = '100%';
                 wordSpan.style.wordWrap = 'break-word';
                 wordSpan.style.overflowWrap = 'break-word';
-                wordSpan.style.wordBreak = 'break-word';
                 
-                // Izračunaj globalni indeks reči
                 const wordIndex = lineMapping.start + wordIndexInLine;
                 if (wordIndex < this.words.length) {
                     this.wordElements[wordIndex] = wordSpan;
                     
-                    // Dodaj event listenere
+                    // Event listeners ostaju isti...
                     wordSpan.addEventListener('mouseenter', () => {
                         if (!this.highlightedWords.includes(wordSpan)) {
                             wordSpan.style.backgroundColor = 'var(--interactive-hover)';
@@ -301,49 +300,59 @@ export class WordSelectorModal extends Modal {
 
     // Dodaj ovu metodu u klasu:
     private calculateLineHeight(text: string, containerWidth: number): number {
-        // Kreiraj privremeni element za merenje
+        // Kreiraj privremeni element koji tačno odgovara stvarnom elementu
         const tempDiv = document.createElement('div');
+        const effectiveWidth = Math.max(200, containerWidth - 32); // dodaj minimum i povećaj margine
+        tempDiv.style.width = `${effectiveWidth}px`;
+        tempDiv.style.maxWidth = `${effectiveWidth}px`; // DODATI
         tempDiv.style.position = 'absolute';
         tempDiv.style.visibility = 'hidden';
-        tempDiv.style.width = `${containerWidth - 16}px`; // minus padding
         tempDiv.style.fontSize = '14px';
         tempDiv.style.lineHeight = '1.4';
+        tempDiv.style.fontFamily = 'inherit'; // DODAJ
+        tempDiv.style.fontWeight = 'inherit'; // DODAJ
         tempDiv.style.wordWrap = 'break-word';
         tempDiv.style.overflowWrap = 'break-word';
         tempDiv.style.whiteSpace = 'normal';
-        tempDiv.textContent = text;
+        tempDiv.style.padding = '1px 8px'; // DODAJ padding koji odgovara stvarnom elementu
+        tempDiv.style.boxSizing = 'border-box'; // DODAJ
+        tempDiv.textContent = text || ' '; // DODAJ fallback za prazne linije
         
         document.body.appendChild(tempDiv);
         const height = tempDiv.offsetHeight;
+        
         document.body.removeChild(tempDiv);
         
-        return Math.max(32, height + 8); // minimum 32px + padding
+        return Math.max(24, height + 14 + 6); // +4 za sigurnost umesto +8
     }
 
     private createVirtualContainer() {
         if (!this.textContainer) return;
 
-        // Kreiraj wrapper za virtualizaciju
+        // Ukloni postojeći container ako postoji
+        if (this.virtualContainer) {
+            this.virtualContainer.remove();
+        }
+
         this.virtualContainer = document.createElement('div');
         this.virtualContainer.style.position = 'relative';
-        this.virtualContainer.style.height = `${this.totalHeight}px`; // koristi totalHeight umesto totalLines * lineHeight
+        this.virtualContainer.style.height = `${this.totalHeight}px`;
         this.virtualContainer.style.width = '100%';
-
-        // Prelamanje reda
-        this.virtualContainer.style.overflow = 'visible'; // PROMENI sa 'hidden' na 'visible'
-        //this.virtualContainer.style.wordWrap = 'break-word';
-        //this.virtualContainer.style.overflowWrap = 'break-word';
+        this.virtualContainer.style.overflow = 'hidden'; // PROMENI nazad na 'hidden'
         
         this.textContainer.appendChild(this.virtualContainer);
         
-        // Dodaj scroll listener
+        // Scroll listener sa throttling
+        let scrollTimeout: NodeJS.Timeout;
         this.textContainer.addEventListener('scroll', () => {
-            this.scrollPosition = this.textContainer!.scrollTop;
-            this.calculateVisibleRange();
-            this.requestRender();
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                this.scrollPosition = this.textContainer!.scrollTop;
+                this.calculateVisibleRange();
+                this.requestRender();
+            }, 16); // ~60fps
         });
         
-        // Početno renderovanje
         this.calculateVisibleRange();
         this.requestRender();
     }
@@ -379,27 +388,34 @@ export class WordSelectorModal extends Modal {
             return;
         }
 
-        // Pronađi liniju koja sadrži trenutnu reč
-        const targetLine = this.lineWordMappings.findIndex(
+        const targetLineIndex = this.lineWordMappings.findIndex(
             mapping => this.currentIndex >= mapping.start && this.currentIndex <= mapping.end
         );
         
-        if (targetLine !== -1) {
-            const targetScrollTop = targetLine * this.lineHeight - this.textContainer.clientHeight / 2;
+        if (targetLineIndex !== -1) {
+            const targetLine = this.lineWordMappings[targetLineIndex];
+            const containerHeight = this.textContainer.clientHeight;
+            const scrollTop = this.textContainer.scrollTop;
             
-            // Osiguraj da su potrebne linije rendrovane
-            const oldStartIndex = this.visibleStartIndex;
-            const oldEndIndex = this.visibleEndIndex;
+            // Proveri da li je linija već vidljiva
+            const isVisible = targetLine.top >= scrollTop && 
+                            (targetLine.top + targetLine.height) <= (scrollTop + containerHeight);
             
-            this.textContainer.scrollTop = Math.max(0, targetScrollTop);
-            this.calculateVisibleRange();
-            
-            // Renderuj ako je potrebno
-            if (this.visibleStartIndex !== oldStartIndex || this.visibleEndIndex !== oldEndIndex) {
-                this.requestRender();
+            if (!isVisible) {
+                const targetScrollTop = targetLine.top - containerHeight / 2;
+                
+                const oldStartIndex = this.visibleStartIndex;
+                const oldEndIndex = this.visibleEndIndex;
+                
+                this.textContainer.scrollTop = Math.max(0, targetScrollTop);
+                this.calculateVisibleRange();
+                
+                if (this.visibleStartIndex !== oldStartIndex || this.visibleEndIndex !== oldEndIndex) {
+                    this.requestRender();
+                }
             }
             
-            // Čekaj da se renderovanje završi, zatim highlight
+            // Uvek highlight, bez obzira na to da li je skrolovano
             setTimeout(() => {
                 this.highlightCurrentWords();
             }, 50);
@@ -446,12 +462,34 @@ export class WordSelectorModal extends Modal {
         this.textContainer.style.border = '1px solid var(--background-modifier-border)';
         this.textContainer.style.borderRadius = '8px';
         this.textContainer.style.backgroundColor = 'var(--background-secondary)';
+        this.textContainer.style.maxWidth = '100%';
+        this.textContainer.style.boxSizing = 'border-box';
+        this.textContainer.style.minWidth = '0'; // važno za flex elemente
+        // Dodaj nakon kreiranja textContainer-a:
+        this.textContainer.style.scrollbarWidth = 'thin'; // za Firefox
+        this.textContainer.style.scrollbarColor = 'var(--scrollbar-thumb-bg) var(--scrollbar-bg)'; // za Firefox
 
+        // Za WebKit browsere
+        const style = document.createElement('style');
+        style.textContent = `
+            .word-selector-container::-webkit-scrollbar {
+                width: 12px;
+            }
+            .word-selector-container::-webkit-scrollbar-track {
+                background: var(--scrollbar-bg);
+            }
+            .word-selector-container::-webkit-scrollbar-thumb {
+                background: var(--scrollbar-thumb-bg);
+                border-radius: 6px;
+            }
+        `;
+        document.head.appendChild(style);
+        
         // Prelamanje reda
         this.textContainer.style.wordWrap = 'break-word';
         this.textContainer.style.overflowWrap = 'break-word';
-        this.textContainer.style.overflowX = 'auto'; // VRATI sa 'hidden' na 'auto'
-        this.textContainer.style.overflowY = 'auto';   // omogućava vertikalni scroll
+        this.textContainer.style.overflowX = 'hidden'; // VRATI sa 'hidden' na 'auto'
+        this.textContainer.style.overflowY = 'scroll';   // omogućava vertikalni scroll
         
         // Kreiraj virtuelni container umesto direktnog kreiranja elemenata
         this.createVirtualContainer();
