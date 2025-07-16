@@ -4,6 +4,7 @@ import { SpeedReaderModal } from './speedReaderModal';
 import { SpeedReaderSettingTab } from './speedReaderSettingTab';
 import { TextInputModalSettings } from './textInputModal';
 import { FileSelectionModalSettings } from './fileSelectionModal';
+import { WordSelectorModalSettings } from './wordSelectorModal';
 
 export interface SpeedReaderSettings {
     wordsPerMinute: number;
@@ -18,6 +19,13 @@ export interface SpeedReaderSettings {
     };
     textInputModalSettings?: TextInputModalSettings;
     fileSelectionModalSettings?: FileSelectionModalSettings;
+    wordSelectorModalSettings?: WordSelectorModalSettings;
+    wordSelectorWindowState?: {
+        left: string;
+        top: string;
+        width: string;
+        height: string;
+    };
 }
 
 const DEFAULT_SETTINGS: SpeedReaderSettings = {
@@ -46,6 +54,20 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
             width: '600px',
             height: '500px'
         }
+    },
+    wordSelectorModalSettings: {
+        windowState: {
+            left: 'auto',
+            top: 'auto',
+            width: '600px',
+            height: '500px'
+        }
+    },
+    wordSelectorWindowState: {
+        left: 'auto',
+        top: 'auto',
+        width: '600px',
+        height: '500px'
     }
 };
 

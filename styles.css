@@ -1,15 +1,243 @@
+/* Main Modal Layout */
 .speed-reader-modal {
-    width: 600px;
+    display: flex;
+    flex-direction: row;
+    width: 800px;
+    height: 600px;
     max-width: 90vw;
     max-height: 90vh;
     position: relative;
+    overflow: hidden;
+    background: var(--background-primary);
 }
 
-.speed-reader-header {
-    text-align: center;
-    margin-bottom: 20px;
+/* Left Section Layout */
+.speed-reader-left-section {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 80%;
+    min-width: 0;
+    height: 100%;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+.speed-reader-text-section {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--background-secondary);
+}
+
+.speed-reader-commands-section {
+    height: 200px;
+    padding: 20px;
+    background: var(--background-primary);
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Button Area Layout */
+.speed-reader-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: center;
+    padding: 10px;
+}
+
+.speed-reader-buttons button {
+    flex: 1;
+    max-width: 200px;
+    white-space: nowrap;
+}
+
+/* Mini Preview Layout */
+.speed-reader-mini-preview {
+    flex: 0 0 20%;
+    padding: 10px;
+    overflow: hidden; /* Promenjeno sa overflow-y: auto */
+    border-left: 1px solid var(--background-modifier-border);
+    position: relative; /* Dodato */
+}
+
+.mini-preview-content {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.speed-reader-mini-preview h3 {
+    margin: 0 0 10px 0;
+    padding-bottom: 5px;
     border-bottom: 1px solid var(--background-modifier-border);
-    padding-bottom: 10px;
+    position: sticky;
+    top: 0;
+    background: var(--background-primary);
+    z-index: 1;
+    font-size: 12px; /* Keep the header readable */
+}
+
+.preview-content {
+    padding-right: 10px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.preview-before {
+    display: inline;
+}
+
+.preview-current {
+    display: inline;
+    /*padding: 1px 2px;
+    background-color: var(--background-modifier-hover);
+    border-radius: 2px;*/
+    color: var(--text-accent);
+}
+
+.preview-after {
+    display: inline;
+}
+
+.preview-placeholder {
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 20px 0;
+    font-size: 12px; /* Keep the placeholder readable */
+}
+
+/* Display and Controls */
+.speed-reader-display {
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--background-modifier-border);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    background: var(--background-secondary);
+}
+
+.current-word {
+    font-size: 2em;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: var(--text-normal);
+}
+
+.position-info {
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+.placeholder-text {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Progress Bar */
+.speed-reader-progress {
+    margin: 10px 0;
+    width: 100%;
+    height: 20px;
+    background-color: var(--background-modifier-border);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 100%;
+    background-color: var(--background-modifier-border);
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--interactive-accent);
+    width: 0%;
+    transition: width 0.2s ease-out;
+    border-radius: 10px;
+    transform-origin: left center;
+}
+
+/* Controls */
+.speed-reader-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.speed-reader-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.speed-reader-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Input Controls */
+.speed-control,
+.chunk-control {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.speed-input,
+.chunk-input {
+    width: 80px;
+    padding: 4px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+}
+
+/* File Selection and Text Input Areas */
+.speed-reader-file-selection,
+.speed-reader-text-input {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Status Messages */
+.loading-text,
+.success-text,
+.error-text {
+    margin-top: 10px;
+    font-size: 0.9em;
+}
+
+.success-text {
+    color: var(--text-success);
+}
+
+.error-text {
+    color: var(--text-error);
 }
 
 .speed-reader-display {
@@ -457,5 +685,97 @@
 }
 
 .text-input-modal .modal-draggable {
+    cursor: move;
+}
+.word-selector-modal {
+    font-family: var(--font-text);
+}
+
+.word-selector-header {
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.word-selector-container {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 15px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.word-selector-line {
+    margin-bottom: 2px;
+    line-height: 1.4;
+}
+
+.word-selector-word {
+    cursor: pointer;
+    padding: 1px 2px;
+    margin: 0;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    display: inline;
+}
+
+.word-selector-word:hover {
+    background-color: var(--interactive-hover);
+}
+
+.word-selector-modal .word-selector-line {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.word-selector-modal .word-selector-word {
+    max-width: 100% !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+}
+
+.word-selector-modal .word-selector-container {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+/* Resize handles */
+.resize-handle {
+    position: absolute;
+    background: transparent;
+}
+
+.resize-handle-right {
+    right: 0;
+    top: 0;
+    width: 5px;
+    height: 100%;
+    cursor: ew-resize;
+}
+
+.resize-handle-bottom {
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 5px;
+    cursor: ns-resize;
+}
+
+.resize-handle-corner {
+    right: 0;
+    bottom: 0;
+    width: 15px;
+    height: 15px;
+    cursor: nw-resize;
+}
+
+.modal-draggable {
     cursor: move;
 }

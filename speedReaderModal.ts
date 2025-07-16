@@ -1,20 +1,23 @@
 import { App, Modal, TFile, Notice } from 'obsidian';
 import { SpeedReaderSettings } from './main';
-import { FileHandler } from './fileHandler';
-import { FileSelectionModal } from './fileSelectionModal';
-import { TextInputModal } from './textInputModal';
+import { MiniPreview } from './readers/miniPreview';
+import { RSVP } from './readers/RSVP';
+import { Commands } from './readers/commands';
+import { Progress } from './readers/progress';
+import { FileButtons } from './readers/fileButtons';
+import { WordSelectorModal } from './wordSelectorModal';
 
 export class SpeedReaderModal extends Modal {
     private plugin: any; // SpeedReaderPlugin type
     private settings: SpeedReaderSettings;
     private text: string = '';
     private words: string[] = [];
-    private currentIndex: number = 0;
-    private isPlaying: boolean = false;
-    private intervalId: number | null = null;
-    private displayElement!: HTMLDivElement;
-    private controlsElement!: HTMLDivElement;
-    private progressElement!: HTMLDivElement;
+    private miniPreview: MiniPreview | null = null;
+    private rsvp: RSVP | null = null;
+    private commands: Commands | null = null;
+    private progress: Progress | null = null;
+    private fileButtons: FileButtons | null = null;
+    private wordSelectorModal: WordSelectorModal | null = null;
 
     constructor(app: App, plugin: any, settings: SpeedReaderSettings) {
         super(app);
@@ -25,12 +28,10 @@ export class SpeedReaderModal extends Modal {
     setText(text: string) {
         this.text = text;
         this.words = this.preprocessText(text);
-        this.currentIndex = 0;
         
-        // KRITIČNA ISPRAVKA: Ažuriraj display odmah kada se postavi tekst
-        setTimeout(() => {
-            this.updateDisplay();
-        }, 100); // Kratka pauza da se osigura da su elementi kreirani
+        if (this.commands) {
+            this.commands.setContent(this.text, this.words);
+        }
     }
 
     preprocessText(text: string): string[] {
@@ -41,7 +42,8 @@ export class SpeedReaderModal extends Modal {
             .filter(word => word.length > 0);
     }
 
-    async loadFileContent(file: TFile, infoElement: HTMLElement) {
+    async loadFileContent(file: TFile, infoElement: HTMLElement | null) {
+        if (!infoElement) return;
         try {
             infoElement.empty();
             infoElement.createEl('div', { 
@@ -52,9 +54,15 @@ export class SpeedReaderModal extends Modal {
             const text = await this.plugin.fileHandler.readFile(file);
 
             if (text.trim()) {
-                this.setText(text);
-                this.updateDisplay();
+                // Set text first
+                this.text = text;
+                this.words = this.preprocessText(text);
                 
+                if (this.commands) {
+                    this.commands.setContent(this.text, this.words);
+                }
+                
+                // Finally update the info text
                 infoElement.empty();
                 infoElement.createEl('div', { 
                     text: `✓ Loaded: ${file.name} (${this.words.length} words)`,
@@ -80,68 +88,94 @@ export class SpeedReaderModal extends Modal {
 
         this.restoreWindowState();
 
-        // Load CSS styles from external file 
+        // Load CSS styles
         const cssPath = this.plugin.app.vault.adapter.getResourcePath('styles.css');
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = cssPath;
         document.head.appendChild(link);
 
-        const headerEl = contentEl.createDiv('speed-reader-header');
-        headerEl.createEl('h2', { text: 'Speed Reader' });
+        // Container for the main content
+        const mainContainer = contentEl;
 
-        this.displayElement = contentEl.createDiv('speed-reader-display');
-        this.displayElement.createEl('div', { 
-            text: 'Select text or load a file to start reading',
-            cls: 'placeholder-text'
-        });
+        // Create the main left section (text and commands)
+        const leftSection = mainContainer.createDiv('speed-reader-left-section');
 
-        this.progressElement = contentEl.createDiv('speed-reader-progress');
-        const progressBar = this.progressElement.createEl('div', { cls: 'progress-bar' });
-        progressBar.createEl('div', { cls: 'progress-fill' });
+        // Create RSVP section
+        this.rsvp = new RSVP(leftSection, this.settings);
 
-        this.controlsElement = contentEl.createDiv('speed-reader-controls');
-        this.createControls();
+        // Create commands section
+        const commandsSection = leftSection.createDiv('speed-reader-commands-section');
+        
+        // Create progress bar
+        this.progress = new Progress(commandsSection);
 
-        const fileSelectionArea = contentEl.createDiv('speed-reader-file-selection');
-        const fileButton = fileSelectionArea.createEl('button', {
-            text: 'Select File from Vault',
-            cls: 'speed-reader-btn file-select-btn'
-        });
+        // Create commands
+        this.commands = new Commands(
+            commandsSection,
+            this.settings,
+            this.plugin,
+            () => {
+                // Callback nakon što je play pokrenut
+            },
+            () => {
+                // Callback nakon što je pauziran
+            },
 
-        const selectedFileInfo = fileSelectionArea.createDiv('selected-file-info');
-
-        fileButton.addEventListener('click', () => {
-            new FileSelectionModal(
-                this.app, 
-                this.plugin.fileHandler, 
-                (file) => {
-                    this.loadFileContent(file, selectedFileInfo);
-                }, 
-                this.plugin, 
-                this.settings.fileSelectionModalSettings || {
-                    windowState: {
-                        left: 'auto',
-                        top: 'auto',
-                        width: '600px',
-                        height: '500px'
+            () => {
+                // Callback nakon što je resetovan
+            },
+            () => {
+                if (this.commands) {
+                    // Ako je play aktivan, resetuj sa novim podešavanjima
+                    if (this.commands.getIsPlaying()) {
+                        this.commands.reset();
+                        this.commands.play();
                     }
                 }
-            ).open();
-        });
+            },
+            {
+                onUpdate: (text: string, words: string[], currentIndex: number) => {
+                    if (this.rsvp) {
+                        this.rsvp.update(text, words, currentIndex);
+                    }
+                    if (this.miniPreview) {
+                        this.miniPreview.update(text, words, currentIndex);
+                    }
+                    if (this.progress) {
+                        this.progress.update(currentIndex, words.length);
+                    }
+                    if (this.wordSelectorModal) {
+                        this.wordSelectorModal.updateCurrentIndex(currentIndex);
+                    }
+                }
+            }
+        );
 
-        const textInputArea = contentEl.createDiv('speed-reader-text-input');
-        const textInputButton = textInputArea.createEl('button', {
-            text: 'Enter Text Manually',
-            cls: 'speed-reader-btn text-input-btn'
-        });
+        // Create file buttons
+        this.fileButtons = new FileButtons(
+            commandsSection,
+            this.app,
+            this.plugin,
+            this.settings,
+            (file: TFile) => this.loadFileContent(file, this.fileButtons ? this.fileButtons.getInfoElement() : null),
+            (text: string) => this.setText(text)
+        ); 
+        /* const wordSelectorBtn = commandsSection.createEl('button', {
+            text: 'Select Word',
+            cls: 'speed-reader-button'
+        }); 
+        wordSelectorBtn.addEventListener('click', () => this.openWordSelector());*/
 
-        textInputButton.addEventListener('click', () => {
-            new TextInputModal(this.app, (text) => {
-                this.setText(text);
-                this.updateDisplay();
-            }, this.plugin, this.plugin.settings.textInputModalSettings).open();
-        });
+        // Create mini preview section (on the right)
+        const miniPreviewElement = mainContainer.createDiv('speed-reader-mini-preview');
+         /*this.miniPreview = new MiniPreview(
+            miniPreviewElement,
+            this.text,
+            this.words,
+            0,
+            this.settings
+        ); */
 
         this.addResizeHandles();
 
@@ -156,189 +190,41 @@ export class SpeedReaderModal extends Modal {
 
         (this as any).resizeObserver = resizeObserver;
 
-        headerEl.addClass('modal-draggable');
+        const headerEl = leftSection.createDiv('modal-draggable');
         this.makeDraggable(headerEl);
 
         if (this.words.length > 0) {
-            this.updateDisplay();
+            // Update displays
+
+
+
         }
     }
 
-    createControls() {
-        const playBtn = this.controlsElement.createEl('button', {
-            text: 'Play',
-            cls: 'speed-reader-btn play-btn'
-        });
-
-        const pauseBtn = this.controlsElement.createEl('button', {
-            text: 'Pause',
-            cls: 'speed-reader-btn pause-btn'
-        });
-
-        const resetBtn = this.controlsElement.createEl('button', {
-            text: 'Reset',
-            cls: 'speed-reader-btn reset-btn'
-        });
-
-        const speedControl = this.controlsElement.createDiv('speed-control');
-        speedControl.createEl('label', { text: 'Speed (WPM): ' });
-        const speedInput = speedControl.createEl('input', {
-            type: 'number',
-            value: this.settings.wordsPerMinute.toString(),
-            cls: 'speed-input'
-        });
-
-        const chunkControl = this.controlsElement.createDiv('chunk-control');
-        chunkControl.createEl('label', { text: 'Words: ' });
-        const chunkInput = chunkControl.createEl('input', {
-            type: 'number',
-            value: this.settings.chunkSize.toString(),
-            cls: 'chunk-input'
-        });
-        chunkInput.min = '1';
-        chunkInput.max = '10';
-
-        chunkInput.addEventListener('change', (e) => {
-            const target = e.target as HTMLInputElement;
-            this.settings.chunkSize = parseInt(target.value) || 1;
-            this.plugin.saveSettings();
-            if (this.isPlaying) {
-                this.pause();
-                this.play();
-            }
-        });
-
-        playBtn.addEventListener('click', () => this.play());
-        pauseBtn.addEventListener('click', () => this.pause());
-        resetBtn.addEventListener('click', () => this.reset());
-        speedInput.addEventListener('change', (e) => {
-            const target = e.target as HTMLInputElement;
-            this.settings.wordsPerMinute = parseInt(target.value) || 250;
-            if (this.isPlaying) {
-                this.pause();
-                this.play();
-            }
-        });
-    }
-
-    play() {
+    private openWordSelector() {
         if (this.words.length === 0) {
-            new Notice('No text to read');
+            new Notice('No text loaded');
             return;
         }
 
-        if (this.isPlaying) {
-            return;
-        }
-
-        const playBtn = this.controlsElement.querySelector('.play-btn') as HTMLButtonElement;
-        if (playBtn) playBtn.disabled = true;
-
-        this.isPlaying = true;
-        const interval = (60000 / this.settings.wordsPerMinute) * this.settings.chunkSize;
-
-        this.intervalId = window.setInterval(() => {
-            if (this.currentIndex >= this.words.length) {
-                this.pause();
-                new Notice('Reading complete!');
-                return;
-            }
-
-            this.updateDisplay();
-            this.currentIndex += this.settings.chunkSize;
-        }, interval);
-    }
-
-    pause() {
-        const playBtn = this.controlsElement.querySelector('.play-btn') as HTMLButtonElement;
-        if (playBtn) playBtn.disabled = false;
-        this.isPlaying = false;
-
-        if (this.intervalId) {
-            clearInterval(this.intervalId);
-            this.intervalId = null;
-        }
-    }
-
-    reset() {
-        const playBtn = this.controlsElement.querySelector('.play-btn') as HTMLButtonElement;
-        if (playBtn) playBtn.disabled = false;
+        const currentIndex = this.commands ? this.commands.getCurrentIndex() : 0;
         
-        this.pause();
-        this.currentIndex = 0;
-        this.updateDisplay();
-    }
-
-    // Dodana zasebna metoda za ažuriranje progress bar-a
-    private updateProgressBar() {
-        if (this.words.length === 0) {
-            const progressFill = this.progressElement?.querySelector('.progress-fill') as HTMLElement;
-            if (progressFill) {
-                progressFill.style.width = '0%';
-            }
-            return;
-        }
-
-        const progressFill = this.progressElement?.querySelector('.progress-fill') as HTMLElement;
-        if (progressFill) {
-            // Ispravka: koristimo Math.min da osiguramo da progress ne prelazi 100%
-            const progress = Math.min(100, (this.currentIndex / this.words.length) * 100);
-            progressFill.style.width = `${progress}%`;
-            
-            // Dodaj transition za glatko animiranje
-            progressFill.style.transition = 'width 0.1s ease-out';
-        }
-    }
-
-updateDisplay() {
-    if (this.words.length === 0) {
-        // Ako nema reči, sakrij progress bar
-        const progressFill = this.progressElement?.querySelector('.progress-fill') as HTMLElement;
-        if (progressFill) {
-            progressFill.style.width = '0%';
-        }
-        return;
-    }
-
-    this.displayElement.empty();
-
-    const wordEl = this.displayElement.createEl('div', { cls: 'current-word' });
-    
-    if (this.currentIndex < this.words.length) {
-        const chunk = [];
-        for (let i = 0; i < this.settings.chunkSize && (this.currentIndex + i) < this.words.length; i++) {
-            chunk.push(this.words[this.currentIndex + i]);
-        }
+        this.wordSelectorModal = new WordSelectorModal(
+            this.app,
+            this.text,
+            this.words,
+            currentIndex,
+            (selectedIndex: number) => {
+                if (this.commands) {
+                    this.commands.setCurrentIndex(selectedIndex);
+                }
+            },
+            this.plugin,
+            this.settings
+        );
         
-        wordEl.textContent = chunk.join(' ');
-        wordEl.style.color = this.settings.highlightColor;
-    } else {
-        wordEl.textContent = 'Reading complete!';
-        wordEl.style.color = this.settings.highlightColor;
+        this.wordSelectorModal.open();
     }
-
-    // KRITIČNA ISPRAVKA: Dodaj proveру da li progressElement postoji
-    const progressFill = this.progressElement?.querySelector('.progress-fill') as HTMLElement;
-    if (progressFill) {
-        // Ispravka: koristimo Math.min da ne prelazimo 100%
-        const progress = Math.min(100, (this.currentIndex / this.words.length) * 100);
-        progressFill.style.width = `${Math.floor(progress)}%`;
-        
-        // Dodaj transition za glatko kretanje
-        if (!progressFill.style.transition) {
-            progressFill.style.transition = 'width 0.2s ease-out';
-        }
-        
-        // Debug log - možeš obrisati posle testiranja
-        console.log(`Progress: ${this.currentIndex}/${this.words.length} = ${Math.floor(progress)}%`);
-    } else {
-        console.log('Progress fill element not found!');
-    }
-
-    const infoEl = this.displayElement.createEl('div', { cls: 'position-info' });
-    const displayedWords = Math.min(this.currentIndex + this.settings.chunkSize, this.words.length);
-    infoEl.textContent = `${displayedWords} / ${this.words.length} words`;
-}
 
     private addResizeHandles() {
         const modalContent = this.contentEl.parentElement as HTMLElement;
@@ -477,7 +363,10 @@ updateDisplay() {
         const modalContent = this.contentEl.parentElement as HTMLElement;
         const state = this.settings.windowState;
         
+        // Set default size if no state exists
         if (!state || state.left === 'auto' || state.top === 'auto') {
+            modalContent.style.width = '800px';  // wider default width
+            modalContent.style.height = '600px';
             return;
         }
 
@@ -524,7 +413,9 @@ updateDisplay() {
     }
 
     onClose() {
-        this.pause();
+        if (this.commands) {
+            this.commands.pause();
+        }
 
         if ((this as any).saveTimeout) {
             clearTimeout((this as any).saveTimeout);
@@ -537,4 +428,5 @@ updateDisplay() {
         }
         contentEl.empty();
     }
+
 }
