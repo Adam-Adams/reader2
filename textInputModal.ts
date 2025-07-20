@@ -1,4 +1,5 @@
 import { App, Modal } from 'obsidian';
+import { SpeedReaderSettings } from './main';
 
 export interface TextInputModalSettings {
     windowState?: {
@@ -31,6 +32,16 @@ export class TextInputModal extends Modal {
                 height: '400px'
             }
         };
+    }
+
+    /* -------------------------------------------------- *
+     * NEW: allow dynamic refresh when settings change     *
+     * -------------------------------------------------- */
+    public updateSettings(s: SpeedReaderSettings) {
+        if (!this.textarea) return;
+        this.textarea.style.fontFamily = s.fontFamily || 'Arial';
+        this.textarea.style.fontSize = `${s.fontSize || 24}px`;
+        this.textarea.style.letterSpacing = `${s.letterSpacing || 0}px`;
     }
 
     // Poboljšana metoda za ažuriranje veličina svih unutrašnjih elemenata
@@ -84,6 +95,7 @@ export class TextInputModal extends Modal {
             this.textarea.style.maxHeight = '100%';
             this.textarea.style.boxSizing = 'border-box';
             this.textarea.style.resize = 'none'; // Onemogući resize jer modal ima svoje resize handle-ove
+            this.updateSettings(this.plugin?.settings || {});
         }
 
         // Ažuriranje buttons container-a

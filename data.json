@@ -1,8 +1,11 @@
 {
   "wordsPerMinute": 2000,
-  "highlightColor": "#ff6b6b",
+  "highlightColor": "#c26bb5",
   "chunkSize": 3,
   "autoAdvance": true,
+  "fontFamily": "OpenDyslexic-Regular",
+  "fontSize": 24,
+  "letterSpacing": 0,
   "windowState": {
     "left": "56px",
     "top": "79.5125px",
@@ -11,8 +14,8 @@
   },
   "textInputModalSettings": {
     "windowState": {
-      "left": "50px",
-      "top": "20px",
+      "left": "288px",
+      "top": "21px",
       "width": "1228px",
       "height": "775px"
     }
@@ -34,9 +37,13 @@
     }
   },
   "wordSelectorWindowState": {
-    "left": "20px",
-    "top": "20px",
-    "width": "1167px",
-    "height": "622px"
+    "left": "317.6px",
+    "top": "66px",
+    "width": "854px",
+    "height": "672px"
+  },
+  "fontSettingsPosition": {
+    "left": "525px",
+    "top": "254.55px"
   }
 }

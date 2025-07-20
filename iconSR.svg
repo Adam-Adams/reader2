@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open-text-icon lucide-book-open-text">
+  <path d="M 12 7 L 12.051 10.236" style=""/>
+  <path d="M16 8h2"/>
+  <path d="M 22.041 4 C 21.336 5.871 21.532 10.675 21.611 10.623 M 7.41 18.051 L 3 18 C 2.448 18 2 17.552 2 17 C 2.838 14.607 3.247 6.836 2 4 C 2 3.448 2.448 3 3 3 L 8 3 C 10.209 3 12 4.791 12 7 C 12 4.791 13.791 3 16 3 L 21 3 C 21.552 3 22 3.448 22 4"/>
+  <path d="M6 12h2"/>
+  <path d="M6 8h2"/>
+  <text style="fill: rgb(51, 51, 51); font-family: &quot;Bodoni MT&quot;; font-size: 32px; letter-spacing: -0.4px; white-space: pre; transform-box: fill-box; transform-origin: 20.6783px 17.5102px;" transform="matrix(0.333542, 0, 0, 0.345895, -6.652463, 4.694039)" x="1.993" y="22.895">SR</text>
+</svg>

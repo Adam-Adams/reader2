@@ -1,0 +1,164 @@
+/* Speed Reader Custom Fonts - Local Files */
+
+@font-face {
+    font-family: "Atkinson-Hyperlegible";
+    src: url("./fonts/AtkinsonHyperlegible-Regular.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Lexend-Regular";
+    src: url("./fonts/Lexend-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Lexend-Bold";
+    src: url("./fonts/Lexend-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Lexend-ExtraBold";
+    src: url("./fonts/Lexend-ExtraBold.ttf") format("truetype");
+    font-weight: 800;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "OpenDyslexic-Regular";
+    src: url("./fonts/OpenDyslexic-Regular.otf") format("opentype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "OpenDyslexic-Bold";
+    src: url("./fonts/OpenDyslexic-Bold.otf") format("opentype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "OpenDyslexic-Italic";
+    src: url("./fonts/OpenDyslexic-Italic.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "OpenDyslexic-Bold-Italic";
+    src: url("./fonts/OpenDyslexic-Bold-Italic.woff2") format("woff2");
+    font-weight: 700;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "LexieReadable-Regular";
+    src: url("./fonts/LexieReadable-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "LexieReadable-Bold";
+    src: url("./fonts/LexieReadable-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+/* Dodati nove fontove ispod */
+
+@font-face {
+    font-family: "AtkinsonHyperlegible-Bold";
+    src: url("./fonts/AtkinsonHyperlegible-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AtkinsonHyperlegible-BoldItalic";
+    src: url("./fonts/AtkinsonHyperlegible-BoldItalic.ttf") format("truetype");
+    font-weight: 700;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "AtkinsonHyperlegible-Italic";
+    src: url("./fonts/AtkinsonHyperlegible-Italic.ttf") format("truetype");
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Lexend-Black";
+    src: url("./fonts/Lexend-Black.ttf") format("truetype");
+    font-weight: 900;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Lexend-ExtraLight";
+    src: url("./fonts/Lexend-ExtraLight.ttf") format("truetype");
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Lexend-Light";
+    src: url("./fonts/Lexend-Light.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Lexend-Medium";
+    src: url("./fonts/Lexend-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Lexend-SemiBold";
+    src: url("./fonts/Lexend-SemiBold.ttf") format("truetype");
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Lexend-Thin";
+    src: url("./fonts/Lexend-Thin.ttf") format("truetype");
+    font-weight: 100;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "SairaStencilOne-Regular";
+    src: url("./fonts/SairaStencilOne-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "StardosStencil-Bold";
+    src: url("./fonts/StardosStencil-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "StardosStencil-Regular";
+    src: url("./fonts/StardosStencil-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "VastShadow-Regular";
+    src: url("./fonts/VastShadow-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}

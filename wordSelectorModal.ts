@@ -43,6 +43,19 @@ export class WordSelectorModal extends Modal {
     private renderFrameId?: number;
     private isRendering = false;
 
+    /* -------------------------------------------------- *
+     * NEW: allow dynamic refresh when settings change     *
+     * -------------------------------------------------- */
+    public updateSettings(s: SpeedReaderSettings) {
+        this.settings = s;
+        if (this.textContainer) {
+            this.textContainer.style.fontFamily = s.fontFamily || 'Arial';
+            this.textContainer.style.fontSize = `${s.fontSize || 24}px`;
+            this.textContainer.style.letterSpacing = `${s.letterSpacing || 0}px`;
+        }
+        this.highlightCurrentWords();
+    }
+
     constructor(
         app: App, 
         text: string, 
@@ -490,7 +503,11 @@ export class WordSelectorModal extends Modal {
         this.textContainer.style.overflowWrap = 'break-word';
         this.textContainer.style.overflowX = 'hidden'; // VRATI sa 'hidden' na 'auto'
         this.textContainer.style.overflowY = 'scroll';   // omogućava vertikalni scroll
-        
+        /* -------------------------------------------------- *
+         * NEW: apply font settings immediately                *
+         * -------------------------------------------------- */
+        this.updateSettings(this.settings);
+
         // Kreiraj virtuelni container umesto direktnog kreiranja elemenata
         this.createVirtualContainer();
         

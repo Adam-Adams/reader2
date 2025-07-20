@@ -81,6 +81,24 @@ export class SpeedReaderModal extends Modal {
         }
     }
 
+    // Nova metoda za ažuriranje podešavanja
+    public updateSettings(settings: SpeedReaderSettings) {
+        this.settings = settings;
+        
+        // Ažuriraj sve komponente sa novim podešavanjima
+        if (this.rsvp) {
+            this.rsvp.updateSettings(settings);
+            // Primeni nove postavke odmah
+            this.rsvp.applyStyles();
+        }
+        /* if (this.miniPreview) {
+            this.miniPreview.updateSettings(settings);
+        }
+        if (this.commands) {
+            this.commands.updateSettings(settings);
+        } */
+    }
+
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
@@ -88,12 +106,12 @@ export class SpeedReaderModal extends Modal {
 
         this.restoreWindowState();
 
-        // Load CSS styles
+        /* // Load CSS styles
         const cssPath = this.plugin.app.vault.adapter.getResourcePath('styles.css');
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = cssPath;
-        document.head.appendChild(link);
+        document.head.appendChild(link); */
 
         // Container for the main content
         const mainContainer = contentEl;
