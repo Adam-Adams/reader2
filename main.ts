@@ -343,8 +343,25 @@ export default class SpeedReaderPlugin extends Plugin {
         // Zatvori meni kada se klikne negde drugde
         const closeMenu = (e: MouseEvent) => {
             if (!contextMenu.contains(e.target as Node)) {
-                document.body.removeChild(contextMenu);
-                document.head.removeChild(style);
+                // Bezbedno ukloni contextMenu samo ako postoji u body-u
+                if (contextMenu.parentNode === document.body) {
+                    try {
+                        document.body.removeChild(contextMenu);
+                    } catch (e) {
+                        console.error('Error removing context menu:', e);
+                    }
+                }
+                
+                // Bezbedno ukloni style samo ako postoji u head-u
+                if (style && style.parentNode === document.head) {
+                    try {
+                        document.head.removeChild(style);
+                    } catch (e) {
+                        console.error('Error removing style:', e);
+                    }
+                }
+                
+                // Ukloni event listener
                 document.removeEventListener('click', closeMenu);
             }
         };

@@ -213,9 +213,9 @@ export class SpeedReaderModal extends Modal {
 
         if (this.words.length > 0) {
             // Update displays
-
-
-
+            if (this.commands) {
+                this.commands.setContent(this.text, this.words);
+            }
         }
     }
 
