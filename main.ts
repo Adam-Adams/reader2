@@ -93,6 +93,29 @@ export default class SpeedReaderPlugin extends Plugin {
         // Učitaj fontove
         await this.loadFonts();
 
+        // Dodaj ikonu na ribbon
+        const ribbonIcon = this.addRibbonIcon('book-open-text', 'Speed Reader', (evt: MouseEvent) => {
+            if (evt.button === 0) { // Levi klik
+                new SpeedReaderModal(this.app, this, this.settings).open();
+            } else if (evt.button === 2) { // Desni klik
+                this.showContextMenu(evt);
+            }
+        });
+        
+                //Bodoni MT<text style="fill: currentColor; font-family: Arial, sans-serif; font-size: 10px; font-weight: light;" x="10" y="21">SR</text>
+        // Zameni ikonu sa custom SVG
+        const iconElement = ribbonIcon.querySelector('svg');
+        if (iconElement) {
+            iconElement.innerHTML = `
+                <path d="M 12 7 L 12.051 10.236"/>
+                <path d="M16 8h2"/>
+                <path d="M 22.041 4 C 21.336 5.871 21.532 10.675 21.611 10.623 M 5.975 18.051 L 3 18 C 2.448 18 2 17.552 2 17 C 2.838 14.607 3.247 6.836 2 4 C 2 3.448 2.448 3 3 3 L 8 3 C 10.209 3 12 4.791 12 7 C 12 4.791 13.791 3 16 3 L 21 3 C 21.552 3 22 3.448 22 4"/>
+                <path d="M6 12h2"/>
+                <path d="M6 8h2"/>
+                <text style="fill: currentColor; font-family: Arial, sans-serif; font-size: 32px; transform-box: fill-box; transform-origin: 20.6783px 17.5102px;" transform="matrix(0.333542, 0, 0, 0.345895, -6.365406, 6.662428)" x="1" y="23">SR</text>
+            `;
+        }
+
         this.addCommand({
             id: 'open-speed-reader',
             name: 'Open Speed Reader',
@@ -196,5 +219,138 @@ export default class SpeedReaderPlugin extends Plugin {
 
     async saveSettings() {
         await this.saveData(this.settings);
+    }
+
+    private showContextMenu(evt: MouseEvent) {
+        // Spreči podrazumevani kontekst meni
+        evt.preventDefault();
+        
+        // Koristi Obsidian's Menu API preko plugin konteksta
+        const Menu = (this.app as any).Menu;
+        if (!Menu) {
+            // Fallback na custom meni ako Menu nije dostupan
+            this.showCustomContextMenu(evt);
+            return;
+        }
+        
+        const menu = new Menu(this.app);
+        
+        menu.addItem((item: any) => {
+            item.setTitle('Open Speed Reader')
+                .setIcon('book-open-text')
+                .onClick(() => {
+                    new SpeedReaderModal(this.app, this, this.settings).open();
+                });
+        });
+        
+        menu.addItem((item: any) => {
+            item.setTitle('Speed Read Current File')
+                .setIcon('file-text')
+                .onClick(async () => {
+                    const activeFile = this.app.workspace.getActiveFile();
+                    if (activeFile) {
+                        await this.speedReadFile(activeFile);
+                    } else {
+                        new Notice('No active file to read');
+                    }
+                });
+        });
+        
+        menu.addItem((item: any) => {
+            item.setTitle('Settings')
+                .setIcon('settings')
+                .onClick(() => {
+                    // @ts-ignore - Obsidian API
+                    this.app.setting.open();
+                    // @ts-ignore - Obsidian API
+                    setTimeout(() => this.app.setting.openTabById('speed-reader'), 100);
+                });
+        });
+        
+        // Prikaži meni na poziciji miša
+        menu.showAtMouseEvent(evt);
+    }
+
+    private showCustomContextMenu(evt: MouseEvent) {
+        // Fallback custom meni kada Obsidian Menu nije dostupan
+        evt.preventDefault();
+        
+        const contextMenu = document.createElement('div');
+        contextMenu.className = 'speed-reader-context-menu';
+        contextMenu.style.position = 'fixed';
+        contextMenu.style.left = evt.clientX + 'px';
+        contextMenu.style.top = evt.clientY + 'px';
+        contextMenu.style.background = 'var(--background-primary)';
+        contextMenu.style.border = '1px solid var(--background-modifier-border)';
+        contextMenu.style.borderRadius = '4px';
+        contextMenu.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+        contextMenu.style.zIndex = '1000';
+        contextMenu.style.minWidth = '200px';
+        
+        // Dodaj stilove
+        const style = document.createElement('style');
+        style.textContent = `
+            .speed-reader-context-menu .menu-item {
+                padding: 8px 12px;
+                cursor: pointer;
+                font-size: 14px;
+                color: var(--text-normal);
+                border-bottom: 1px solid var(--background-modifier-border);
+            }
+            .speed-reader-context-menu .menu-item:last-child {
+                border-bottom: none;
+            }
+            .speed-reader-context-menu .menu-item:hover {
+                background: var(--background-secondary);
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Dodaj opcije menija
+        const commands = [
+            { title: 'Open Speed Reader', action: () => new SpeedReaderModal(this.app, this, this.settings).open() },
+            { title: 'Speed Read Current File', action: async () => {
+                const activeFile = this.app.workspace.getActiveFile();
+                if (activeFile) {
+                    await this.speedReadFile(activeFile);
+                } else {
+                    new Notice('No active file to read');
+                }
+            }},
+            { title: 'Settings', action: () => {
+                // @ts-ignore - Obsidian API
+                this.app.setting.open();
+                // @ts-ignore - Obsidian API
+                setTimeout(() => this.app.setting.openTabById('speed-reader'), 100);
+            }}
+        ];
+        
+        commands.forEach(cmd => {
+            const item = document.createElement('div');
+            item.className = 'menu-item';
+            item.textContent = cmd.title;
+            item.addEventListener('click', () => {
+                cmd.action();
+                document.body.removeChild(contextMenu);
+                document.head.removeChild(style);
+            });
+            contextMenu.appendChild(item);
+        });
+        
+        // Dodaj meni u DOM
+        document.body.appendChild(contextMenu);
+        
+        // Zatvori meni kada se klikne negde drugde
+        const closeMenu = (e: MouseEvent) => {
+            if (!contextMenu.contains(e.target as Node)) {
+                document.body.removeChild(contextMenu);
+                document.head.removeChild(style);
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu);
+        }, 0);
     }
 }

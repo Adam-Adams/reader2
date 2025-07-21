@@ -80,6 +80,11 @@ export const FONT_OPTIONS = {
 
 // Funkcija za zamenu relativnih putanja fontova sa apsolutnim
 export function replaceFontPaths(cssContent: string, manifest: any, app: App): string {
+    // Handle undefined manifest
+    if (!manifest || !manifest.dir) {
+        return cssContent;
+    }
+    
     for (const fontFile of FONT_FILES) {
         const relativePath = `./fonts/${fontFile}`;
         const absolutePath = app.vault.adapter.getResourcePath(`${manifest.dir}/fonts/${fontFile}`);
