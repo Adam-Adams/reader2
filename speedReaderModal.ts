@@ -18,6 +18,7 @@ export class SpeedReaderModal extends Modal {
     private progress: Progress | null = null;
     private fileButtons: FileButtons | null = null;
     private wordSelectorModal: WordSelectorModal | null = null;
+    private headerEl?: HTMLElement;
 
     constructor(app: App, plugin: any, settings: SpeedReaderSettings) {
         super(app);
@@ -104,20 +105,61 @@ export class SpeedReaderModal extends Modal {
         contentEl.empty();
         contentEl.addClass('speed-reader-modal');
 
+        // Set up contentEl as flex container
+        contentEl.style.display = 'flex';
+        contentEl.style.flexDirection = 'column';
+        contentEl.style.height = '100%';
+        contentEl.style.width = '100%'; // Ensure full width
+
         this.restoreWindowState();
 
-        /* // Load CSS styles
-        const cssPath = this.plugin.app.vault.adapter.getResourcePath('styles.css');
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = cssPath;
-        document.head.appendChild(link); */
+        // Create header at the very top - full width
+        this.headerEl = contentEl.createDiv('speed-reader-header');
+        this.headerEl.style.width = '100%';
+        this.headerEl.style.minWidth = '100%'; // Ensure minimum width
+        this.headerEl.style.maxWidth = '100%'; // Prevent overflow
+        this.headerEl.style.flexShrink = '0';
+        this.headerEl.style.flexGrow = '0'; // Don't grow
+        this.headerEl.style.boxSizing = 'border-box'; // Include padding in width calculation
+        this.headerEl.style.borderBottom = '1px solid var(--background-modifier-border)';
+        this.headerEl.style.padding = '10px'; // Use padding instead of separate bottom padding
+        this.headerEl.style.marginBottom = '10px';
+        this.headerEl.style.cursor = 'move';
+        this.headerEl.style.overflow = 'hidden'; // Prevent content overflow
+        
+        const headerContent = this.headerEl.createDiv('modal-header-content');
+        headerContent.style.display = 'flex';
+        headerContent.style.justifyContent = 'space-between';
+        headerContent.style.alignItems = 'center';
+        headerContent.style.width = '100%';
+        headerContent.style.boxSizing = 'border-box';
+        headerContent.style.minWidth = '0'; // Allow shrinking
 
-        // Container for the main content
-        const mainContainer = contentEl;
+        const title = headerContent.createEl('h2', { text: 'Speed Reader' });
+        title.style.margin = '0';
+        title.style.fontSize = '18px';
+        title.style.fontWeight = '600';
+        title.style.flexShrink = '0'; // Don't shrink the title
+        title.style.whiteSpace = 'nowrap'; // Keep title on one line
+
+        // Make header draggable
+        this.headerEl.addClass('modal-draggable');
+        this.makeDraggable(this.headerEl);
+
+        // Container for main content below header
+        const mainContainer = contentEl.createDiv('speed-reader-main-container');
+        mainContainer.style.display = 'flex';
+        mainContainer.style.flex = '1';
+        mainContainer.style.minHeight = '0';
+        mainContainer.style.width = '100%';
+        mainContainer.style.boxSizing = 'border-box';
 
         // Create the main left section (text and commands)
         const leftSection = mainContainer.createDiv('speed-reader-left-section');
+        leftSection.style.flex = '1';
+        leftSection.style.display = 'flex';
+        leftSection.style.flexDirection = 'column';
+        leftSection.style.minWidth = '0';
 
         // Create RSVP section
         this.rsvp = new RSVP(leftSection, this.settings);
@@ -179,14 +221,13 @@ export class SpeedReaderModal extends Modal {
             (file: TFile) => this.loadFileContent(file, this.fileButtons ? this.fileButtons.getInfoElement() : null),
             (text: string) => this.setText(text)
         ); 
-        /* const wordSelectorBtn = commandsSection.createEl('button', {
-            text: 'Select Word',
-            cls: 'speed-reader-button'
-        }); 
-        wordSelectorBtn.addEventListener('click', () => this.openWordSelector());*/
 
         // Create mini preview section (on the right)
         const miniPreviewElement = mainContainer.createDiv('speed-reader-mini-preview');
+        miniPreviewElement.style.width = '300px';
+        miniPreviewElement.style.flexShrink = '0';
+        miniPreviewElement.style.borderLeft = '1px solid var(--background-modifier-border)';
+        miniPreviewElement.style.paddingLeft = '10px';
          /*this.miniPreview = new MiniPreview(
             miniPreviewElement,
             this.text,
@@ -199,6 +240,9 @@ export class SpeedReaderModal extends Modal {
 
         const modalContent = this.contentEl.parentElement as HTMLElement;
         const resizeObserver = new ResizeObserver(() => {
+            // Update header width when modal is resized
+            this.updateHeaderWidth();
+            
             clearTimeout((this as any).saveTimeout);
             (this as any).saveTimeout = setTimeout(() => {
                 this.saveWindowState();
@@ -208,14 +252,20 @@ export class SpeedReaderModal extends Modal {
 
         (this as any).resizeObserver = resizeObserver;
 
-        const headerEl = leftSection.createDiv('modal-draggable');
-        this.makeDraggable(headerEl);
-
         if (this.words.length > 0) {
             // Update displays
             if (this.commands) {
                 this.commands.setContent(this.text, this.words);
             }
+        }
+    }
+
+    // Add this new method to handle header resizing
+    private updateHeaderWidth() {
+        if (this.headerEl) {
+            // Force recalculation of header width
+            this.headerEl.style.width = '100%';
+            this.headerEl.offsetWidth; // Trigger reflow
         }
     }
 
@@ -446,5 +496,4 @@ export class SpeedReaderModal extends Modal {
         }
         contentEl.empty();
     }
-
 }

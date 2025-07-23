@@ -11,6 +11,45 @@
     background: var(--background-primary);
 }
 
+/* Speed Reader Modal Header */
+.modal-header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 8px;
+    background-color: var(--background-primary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    box-sizing: border-box;
+    cursor: move;
+}
+
+.modal-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    color: var(--text-normal);
+}
+
+.modal-close-btn:hover {
+    color: var(--text-accent);
+}
+
 /* Left Section Layout */
 .speed-reader-left-section {
     display: flex;

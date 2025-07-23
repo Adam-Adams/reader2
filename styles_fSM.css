@@ -145,7 +145,7 @@
     gap: 2px;
     min-width: 0;
     overflow: hidden;
-    width: 100%;
+    width: 极
 }
 
 .file-name {
@@ -195,7 +195,7 @@
     left: 0;
     width: 100%;
     height: 8px;
-    cursor: ns-resize;
+    cursor: ns-res极
 }
 
 .resize-handle-corner {
@@ -323,4 +323,43 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Header styles - full width */
+.modal-header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 8px;
+    background-color: var(--background-primary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    box-sizing: border-box;
+    cursor: move;
+}
+
+.modal-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px; /* Match main container width if needed */
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    color: var(--text-normal);
+}
+
+.modal-close-btn:hover {
+    color: var(--text-accent);
 }

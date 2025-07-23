@@ -7,16 +7,16 @@
   "fontSize": 24,
   "letterSpacing": 0,
   "windowState": {
-    "left": "56px",
-    "top": "79.5125px",
-    "width": "849px",
-    "height": "610px"
+    "left": "294px",
+    "top": "96px",
+    "width": "780px",
+    "height": "589px"
   },
   "textInputModalSettings": {
     "windowState": {
-      "left": "288px",
+      "left": "193.6px",
       "top": "21px",
-      "width": "1228px",
+      "width": "854px",
       "height": "775px"
     }
   },
@@ -37,7 +37,7 @@
     }
   },
   "wordSelectorWindowState": {
-    "left": "317.6px",
+    "left": "410.6px",
     "top": "66px",
     "width": "854px",
     "height": "672px"
