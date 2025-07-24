@@ -23,29 +23,25 @@ export class WordSelectorModal extends Modal {
     private saveTimeout: any;
     private wordElements: HTMLElement[] = [];
     private highlightedWords: HTMLElement[] = [];
-    private totalHeight = 0; // DODAJ OVU LINIJU
+    private totalHeight = 0;
     
-    // Virtualizacija
+    // Virtualization
     private virtualContainer?: HTMLElement;
     private visibleLines: HTMLElement[] = [];
-    private lineHeight = 32; // Aproksimativna visina linije
+    private lineHeight = 32;
     private visibleStartIndex = 0;
     private visibleEndIndex = 0;
     private totalLines = 0;
     private lines: string[] = [];
-    //private lineWordMappings: { start: number; end: number; text: string }[] = [];
     private lineWordMappings: { start: number; end: number; text: string; height: number; top: number }[] = [];
     private scrollPosition = 0;
-    private renderBuffer = 5; // Broj dodatnih linija za renderovanje
+    private renderBuffer = 5;
     
-    // Optimizacije
+    // Optimizations
     private intersectionObserver?: IntersectionObserver;
     private renderFrameId?: number;
     private isRendering = false;
 
-    /* -------------------------------------------------- *
-     * NEW: allow dynamic refresh when settings change     *
-     * -------------------------------------------------- */
     public updateSettings(s: SpeedReaderSettings) {
         this.settings = s;
         if (this.textContainer) {
@@ -73,25 +69,20 @@ export class WordSelectorModal extends Modal {
         this.plugin = plugin;
         this.settings = settings;
         
-        // Pripremi podatke za virtualizaciju
         this.prepareVirtualization();
     }
 
     private prepareVirtualization() {
         this.lines = this.text.split('\n');
         this.totalLines = this.lines.length;
-        
-        // Dodaj debouncing za performanse
         this.lineWordMappings = [];
         
         let globalWordIndex = 0;
         let cumulativeHeight = 0;
         
-        // Koristi stvarnu širinu kontejnera
-        const modalContent = this.contentEl.parentElement as HTMLElement;
-        const modalWidth = modalContent?.clientWidth || 600;
-        const containerWidth = this.textContainer?.clientWidth || 
-                              Math.max(200, modalWidth - 80); // dodaj minimum        
+        const containerWidth = this.textContainer 
+            ? this.textContainer.clientWidth 
+            : Math.max(200, (this.contentEl.parentElement?.clientWidth || 600) - 80);
         
         this.lines.forEach((line, index) => {
             const wordsInLine = line.trim().split(/\s+/).filter(word => word.length > 0);
@@ -99,8 +90,7 @@ export class WordSelectorModal extends Modal {
             const end = globalWordIndex + wordsInLine.length - 1;
             globalWordIndex += wordsInLine.length;
             
-            // Preciznije izračunavanje visine
-            const lineHeight = this.calculateLineHeight(line, containerWidth);
+            const lineHeight = this.calculateLineHeight(line, containerWidth, this.settings);
             
             this.lineWordMappings.push({
                 start,
@@ -124,26 +114,21 @@ export class WordSelectorModal extends Modal {
         const contentWidth = modalRect.width;
         const contentHeight = modalRect.height;
         
-        // Postojeći kod za header i textContainer...
-        
         if (this.textContainer) {
-            //const availableHeight = contentHeight - 60 - 80 - 20; // header + padding + margin
             const headerHeight = this.headerEl?.offsetHeight || 60;
-            const availableHeight = contentHeight - headerHeight - 40 - 20; // tačna visina header-a + padding + margin
-            const maxWidth = contentWidth - 60; // povećaj margine
+            const availableHeight = contentHeight - headerHeight - 40 - 20;
+            const maxWidth = contentWidth - 60;
             this.textContainer.style.width = `${maxWidth}px`;
             this.textContainer.style.maxWidth = `${maxWidth}px`;
             this.textContainer.style.height = `${Math.max(200, availableHeight)}px`;
             this.textContainer.style.padding = '10px';
             this.textContainer.style.boxSizing = 'border-box';
 
-            // KLJUČNO: Rekalkuliši virtualizaciju sa novim dimenzijama
             this.prepareVirtualization();
             this.createVirtualContainer();
             this.calculateVisibleRange();
             this.requestRender();
             
-            // Skroluj do trenutne reči
             setTimeout(() => {
                 this.scrollToCurrentWord();
             }, 100);
@@ -180,7 +165,6 @@ export class WordSelectorModal extends Modal {
         const containerHeight = this.textContainer.clientHeight;
         const scrollTop = this.textContainer.scrollTop;
         
-        // Pronađi početnu i završnu liniju na osnovu kumulativnih visina
         let startIndex = 0;
         let endIndex = this.totalLines - 1;
         
@@ -195,7 +179,6 @@ export class WordSelectorModal extends Modal {
             }
         }
         
-        // Dodaj buffer
         this.visibleStartIndex = Math.max(0, startIndex - this.renderBuffer);
         this.visibleEndIndex = Math.min(this.totalLines - 1, endIndex + this.renderBuffer);
     }
@@ -213,18 +196,15 @@ export class WordSelectorModal extends Modal {
     private renderVisibleLines() {
         if (!this.textContainer || !this.virtualContainer) return;
         
-        // Očisti postojeće vidljive linije
         this.visibleLines.forEach(line => line.remove());
         this.visibleLines = [];
         
-        // Renderuj vidljive linije
         for (let i = this.visibleStartIndex; i <= this.visibleEndIndex; i++) {
             const lineDiv = this.createLineElement(i);
             this.virtualContainer.appendChild(lineDiv);
             this.visibleLines.push(lineDiv);
         }
         
-        // Ažuriraj highlight
         this.highlightCurrentWords();
     }
 
@@ -236,24 +216,21 @@ export class WordSelectorModal extends Modal {
         lineDiv.style.top = `${lineMapping.top}px`;
         lineDiv.style.left = '0';
         lineDiv.style.right = '0';
-        lineDiv.style.height = `${lineMapping.height}px`; // PROMENI: koristi tačnu visinu
+        lineDiv.style.height = `${lineMapping.height}px`;
         lineDiv.style.minHeight = `${lineMapping.height}px`;
         lineDiv.style.display = 'block';
-        lineDiv.style.paddingLeft = '8px';
-        lineDiv.style.paddingRight = '8px';
-        lineDiv.style.paddingTop = '2px'; // DODAJ
-        lineDiv.style.paddingBottom = '2px'; // DODAJ
+        lineDiv.style.padding = '4px 10px';
         lineDiv.style.marginBottom = '1px';
         lineDiv.style.lineHeight = '1.4';
         lineDiv.style.boxSizing = 'border-box';
         lineDiv.style.wordWrap = 'break-word';
         lineDiv.style.overflowWrap = 'break-word';
         lineDiv.style.whiteSpace = 'normal';
-        lineDiv.style.overflow = 'hidden'; // PROMENI nazad na 'hidden' da spreči preklapanje
-        lineDiv.style.fontSize = '14px'; // EKSPLICITNO POSTAVI
-        lineDiv.style.fontFamily = 'inherit'; // DODAJ
+        lineDiv.style.overflow = 'hidden';
+        lineDiv.style.fontFamily = this.settings.fontFamily || 'Arial';
+        lineDiv.style.fontSize = `${this.settings.fontSize || 24}px`;
+        lineDiv.style.letterSpacing = `${this.settings.letterSpacing || 0}px`;
         
-        // Ostatak koda ostaje isti...
         const line = lineMapping.text;
         const wordsInLine = line.trim().split(/(\s+)/).filter(part => part.length > 0);
         let wordIndexInLine = 0;
@@ -268,7 +245,6 @@ export class WordSelectorModal extends Modal {
                 wordSpan.textContent = part;
                 wordSpan.className = 'word-selector-word';
                 
-                // Isti stilovi kao pre...
                 wordSpan.style.cursor = 'pointer';
                 wordSpan.style.padding = '1px 2px';
                 wordSpan.style.margin = '0';
@@ -283,7 +259,6 @@ export class WordSelectorModal extends Modal {
                 if (wordIndex < this.words.length) {
                     this.wordElements[wordIndex] = wordSpan;
                     
-                    // Event listeners ostaju isti...
                     wordSpan.addEventListener('mouseenter', () => {
                         if (!this.highlightedWords.includes(wordSpan)) {
                             wordSpan.style.backgroundColor = 'var(--interactive-hover)';
@@ -311,38 +286,36 @@ export class WordSelectorModal extends Modal {
         return lineDiv;
     }
 
-    // Dodaj ovu metodu u klasu:
-    private calculateLineHeight(text: string, containerWidth: number): number {
-        // Kreiraj privremeni element koji tačno odgovara stvarnom elementu
+    private calculateLineHeight(text: string, containerWidth: number, settings: SpeedReaderSettings): number {
         const tempDiv = document.createElement('div');
-        const effectiveWidth = Math.max(200, containerWidth - 32); // dodaj minimum i povećaj margine
+        const effectiveWidth = Math.max(200, containerWidth - 32);
         tempDiv.style.width = `${effectiveWidth}px`;
-        tempDiv.style.maxWidth = `${effectiveWidth}px`; // DODATI
+        tempDiv.style.maxWidth = `${effectiveWidth}px`;
         tempDiv.style.position = 'absolute';
         tempDiv.style.visibility = 'hidden';
-        tempDiv.style.fontSize = '14px';
+        tempDiv.style.fontFamily = settings.fontFamily || 'Arial';
+        tempDiv.style.fontSize = `${settings.fontSize || 24}px`;
+        tempDiv.style.letterSpacing = `${settings.letterSpacing || 0}px`;
         tempDiv.style.lineHeight = '1.4';
-        tempDiv.style.fontFamily = 'inherit'; // DODAJ
-        tempDiv.style.fontWeight = 'inherit'; // DODAJ
+        tempDiv.style.fontWeight = 'inherit';
         tempDiv.style.wordWrap = 'break-word';
         tempDiv.style.overflowWrap = 'break-word';
         tempDiv.style.whiteSpace = 'normal';
-        tempDiv.style.padding = '1px 8px'; // DODAJ padding koji odgovara stvarnom elementu
-        tempDiv.style.boxSizing = 'border-box'; // DODAJ
-        tempDiv.textContent = text || ' '; // DODAJ fallback za prazne linije
+        tempDiv.style.padding = '4px 10px';
+        tempDiv.style.boxSizing = 'border-box';
+        tempDiv.textContent = text || ' ';
         
         document.body.appendChild(tempDiv);
         const height = tempDiv.offsetHeight;
         
         document.body.removeChild(tempDiv);
         
-        return Math.max(24, height + 14 + 6); // +4 za sigurnost umesto +8
+        return Math.max(24, height + 32);
     }
 
     private createVirtualContainer() {
         if (!this.textContainer) return;
 
-        // Ukloni postojeći container ako postoji
         if (this.virtualContainer) {
             this.virtualContainer.remove();
         }
@@ -351,11 +324,10 @@ export class WordSelectorModal extends Modal {
         this.virtualContainer.style.position = 'relative';
         this.virtualContainer.style.height = `${this.totalHeight}px`;
         this.virtualContainer.style.width = '100%';
-        this.virtualContainer.style.overflow = 'hidden'; // PROMENI nazad na 'hidden'
+        this.virtualContainer.style.overflow = 'hidden';
         
         this.textContainer.appendChild(this.virtualContainer);
         
-        // Scroll listener sa throttling
         let scrollTimeout: NodeJS.Timeout;
         this.textContainer.addEventListener('scroll', () => {
             clearTimeout(scrollTimeout);
@@ -363,7 +335,7 @@ export class WordSelectorModal extends Modal {
                 this.scrollPosition = this.textContainer!.scrollTop;
                 this.calculateVisibleRange();
                 this.requestRender();
-            }, 16); // ~60fps
+            }, 16);
         });
         
         this.calculateVisibleRange();
@@ -371,7 +343,6 @@ export class WordSelectorModal extends Modal {
     }
 
     private highlightCurrentWords() {
-        // Ukloni prethodne highlight-ove
         this.highlightedWords.forEach(el => {
             if (el.parentElement) {
                 el.style.backgroundColor = 'transparent';
@@ -381,7 +352,6 @@ export class WordSelectorModal extends Modal {
         });
         this.highlightedWords = [];
 
-        // Highlight trenutne reči (chunk)
         const chunkSize = this.settings.chunkSize || 1;
         for (let i = 0; i < chunkSize && (this.currentIndex + i) < this.words.length; i++) {
             const wordIndex = this.currentIndex + i;
@@ -410,7 +380,6 @@ export class WordSelectorModal extends Modal {
             const containerHeight = this.textContainer.clientHeight;
             const scrollTop = this.textContainer.scrollTop;
             
-            // Proveri da li je linija već vidljiva
             const isVisible = targetLine.top >= scrollTop && 
                             (targetLine.top + targetLine.height) <= (scrollTop + containerHeight);
             
@@ -428,14 +397,12 @@ export class WordSelectorModal extends Modal {
                 }
             }
             
-            // Uvek highlight, bez obzira na to da li je skrolovano
             setTimeout(() => {
                 this.highlightCurrentWords();
             }, 50);
         }
     }
 
-    // Javna metoda za ažuriranje pozicije
     public updateCurrentIndex(newIndex: number) {
         this.currentIndex = newIndex;
         this.scrollToCurrentWord();
@@ -449,7 +416,6 @@ export class WordSelectorModal extends Modal {
         this.setBaseStyles();
         this.restoreWindowState();
 
-        // Kreiraj header
         this.headerEl = contentEl.createDiv('word-selector-header');
         this.headerEl.style.flexShrink = '0';
         this.headerEl.style.borderBottom = '1px solid var(--background-modifier-border)';
@@ -466,7 +432,6 @@ export class WordSelectorModal extends Modal {
         subtitle.style.marginTop = '5px';
         subtitle.textContent = `${this.words.length} words • Click on any word to start reading from there`;
 
-        // Kreiraj text container
         this.textContainer = contentEl.createDiv('word-selector-container');
         this.textContainer.style.flexGrow = '1';
         this.textContainer.style.flexShrink = '1';
@@ -477,12 +442,10 @@ export class WordSelectorModal extends Modal {
         this.textContainer.style.backgroundColor = 'var(--background-secondary)';
         this.textContainer.style.maxWidth = '100%';
         this.textContainer.style.boxSizing = 'border-box';
-        this.textContainer.style.minWidth = '0'; // važno za flex elemente
-        // Dodaj nakon kreiranja textContainer-a:
-        this.textContainer.style.scrollbarWidth = 'thin'; // za Firefox
-        this.textContainer.style.scrollbarColor = 'var(--scrollbar-thumb-bg) var(--scrollbar-bg)'; // za Firefox
+        this.textContainer.style.minWidth = '0';
+        this.textContainer.style.scrollbarWidth = 'thin';
+        this.textContainer.style.scrollbarColor = 'var(--scrollbar-thumb-bg) var(--scrollbar-bg)';
 
-        // Za WebKit browsere
         const style = document.createElement('style');
         style.textContent = `
             .word-selector-container::-webkit-scrollbar {
@@ -498,29 +461,17 @@ export class WordSelectorModal extends Modal {
         `;
         document.head.appendChild(style);
         
-        // Prelamanje reda
         this.textContainer.style.wordWrap = 'break-word';
         this.textContainer.style.overflowWrap = 'break-word';
-        this.textContainer.style.overflowX = 'hidden'; // VRATI sa 'hidden' na 'auto'
-        this.textContainer.style.overflowY = 'scroll';   // omogućava vertikalni scroll
-        /* -------------------------------------------------- *
-         * NEW: apply font settings immediately                *
-         * -------------------------------------------------- */
+        this.textContainer.style.overflowX = 'hidden';
+        this.textContainer.style.overflowY = 'scroll';
         this.updateSettings(this.settings);
 
-        // Kreiraj virtuelni container umesto direktnog kreiranja elemenata
         this.createVirtualContainer();
-        
-        // Dodaj resize handle-ove
         this.addResizeHandles();
-
-        // Početno ažuriranje veličina
         this.updateElementSizes();
-
-        // Skroluj do trenutne reči
         this.scrollToCurrentWord();
 
-        // Postavi ResizeObserver
         const modalContent = this.contentEl.parentElement as HTMLElement;
         this.resizeObserver = new ResizeObserver(() => {
             clearTimeout(this.saveTimeout);
@@ -531,7 +482,6 @@ export class WordSelectorModal extends Modal {
         });
         this.resizeObserver.observe(modalContent);
 
-        // Dodaj window resize listener
         const handleWindowResize = () => {
             this.ensureModalWithinViewport();
             this.updateElementSizes();
@@ -539,7 +489,6 @@ export class WordSelectorModal extends Modal {
         window.addEventListener('resize', handleWindowResize);
         (this as any).windowResizeHandler = handleWindowResize;
 
-        // Učini header draggable
         this.headerEl.addClass('modal-draggable');
         this.makeDraggable(this.headerEl);
     }
