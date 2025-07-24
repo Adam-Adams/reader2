@@ -24,6 +24,114 @@ export class SpeedReaderModal extends Modal {
         super(app);
         this.plugin = plugin;
         this.settings = settings;
+        
+        // Postavljamo property da sprečimo zatvaranje na klik van prozora
+        this.shouldRestoreSelection = false;
+    }
+
+    // Prepisujemo metode koje kontrolišu zatvaranje modala
+    onClickOutside(evt: MouseEvent): void {
+        // Sprečavamo zatvaranje na klik van prozora
+    }
+
+    onBackdropClick(evt: MouseEvent): void {
+        // Sprečavamo zatvaranje na klik van prozora
+    }
+
+    // Dozvoljavamo zatvaranje samo kroz naše kontrole
+    private allowClose = false;
+
+    close(): void {
+        if (this.allowClose) {
+            super.close();
+        }
+    }
+
+    private forceClose(): void {
+        this.allowClose = true;
+        super.close();
+    }
+
+    private setupModalControls(): void {
+        // Event listener za Escape taster
+        const escapeHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.forceClose();
+            }
+        };
+
+        document.addEventListener('keydown', escapeHandler, true);
+        (this as any).escapeHandler = escapeHandler;
+
+        // Čeka da se modal potpuno učita pre traženja default close dugmeta
+        setTimeout(() => this.setupDefaultCloseButton(), 200);
+    }
+
+    private setupDefaultCloseButton(): void {
+        const modalEl = this.contentEl.parentElement;
+        if (!modalEl) return;
+
+        // Tražimo sve moguće načine kako Obsidian kreira close dugme
+        const possibleSelectors = [
+            '.modal-close-button',
+            '[aria-label="Close"]',
+            '[title="Close"]',
+            'button[class*="close"]',
+            '.lucide-x',
+            '.clickable-icon[aria-label="Close"]'
+        ];
+
+        let closeButton: HTMLElement | null = null;
+
+        // Probaj sa selektorima
+        for (const selector of possibleSelectors) {
+            closeButton = modalEl.querySelector(selector) as HTMLElement;
+            if (closeButton) break;
+        }
+
+        // Ako nije našao, prođi kroz sve dugmiće i traži one sa close simbolima
+        if (!closeButton) {
+            const allButtons = modalEl.querySelectorAll('button, .clickable-icon');
+            for (let i = 0; i < allButtons.length; i++) {
+                const buttonEl = allButtons[i] as HTMLElement;
+                const text = buttonEl.textContent?.trim().toLowerCase() || '';
+                const ariaLabel = buttonEl.getAttribute('aria-label')?.toLowerCase() || '';
+                const title = buttonEl.getAttribute('title')?.toLowerCase() || '';
+                
+                if (
+                    ['×', 'x', '✕'].includes(text) ||
+                    ['close', 'zatvori'].includes(ariaLabel) ||
+                    ['close', 'zatvori'].includes(title) ||
+                    buttonEl.innerHTML.includes('lucide-x') ||
+                    buttonEl.classList.contains('modal-close-button')
+                ) {
+                    closeButton = buttonEl;
+                    break;
+                }
+            }
+        }
+
+        // Ako je našao close dugme, postavi handler
+        if (closeButton) {
+            // Ukloni postojeće event listenere
+            const newButton = closeButton.cloneNode(true) as HTMLElement;
+            closeButton.parentNode?.replaceChild(newButton, closeButton);
+            
+            // Dodaj naš handler
+            newButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.forceClose();
+            });
+
+            console.log('Default close button found and configured');
+        } else {
+            console.log('Default close button not found, retrying...');
+            // Pokušaj ponovo nakon kratke pauze
+            setTimeout(() => this.setupDefaultCloseButton(), 300);
+        }
     }
 
     setText(text: string) {
@@ -112,6 +220,9 @@ export class SpeedReaderModal extends Modal {
         contentEl.style.width = '100%'; // Ensure full width
 
         this.restoreWindowState();
+
+        // Postavljamo event listenere za Escape i default close dugme
+        this.setupModalControls();
 
         // Create header at the very top - full width
         this.headerEl = contentEl.createDiv('speed-reader-header');
@@ -238,7 +349,7 @@ export class SpeedReaderModal extends Modal {
 
         this.addResizeHandles();
 
-        const modalContent = this.contentEl.parentElement as HTMLElement;
+        const modalContainer = this.contentEl.parentElement as HTMLElement;
         const resizeObserver = new ResizeObserver(() => {
             // Update header width when modal is resized
             this.updateHeaderWidth();
@@ -248,7 +359,7 @@ export class SpeedReaderModal extends Modal {
                 this.saveWindowState();
             }, 500);
         });
-        resizeObserver.observe(modalContent);
+        resizeObserver.observe(modalContainer);
 
         (this as any).resizeObserver = resizeObserver;
 
@@ -295,15 +406,15 @@ export class SpeedReaderModal extends Modal {
     }
 
     private addResizeHandles() {
-        const modalContent = this.contentEl.parentElement as HTMLElement;
+        const modalWrapper = this.contentEl.parentElement as HTMLElement;
         
-        const rightHandle = modalContent.createDiv('resize-handle resize-handle-right');
+        const rightHandle = modalWrapper.createDiv('resize-handle resize-handle-right');
         this.makeResizable(rightHandle, 'right');
         
-        const bottomHandle = modalContent.createDiv('resize-handle resize-handle-bottom');
+        const bottomHandle = modalWrapper.createDiv('resize-handle resize-handle-bottom');
         this.makeResizable(bottomHandle, 'bottom');
         
-        const cornerHandle = modalContent.createDiv('resize-handle resize-handle-corner');
+        const cornerHandle = modalWrapper.createDiv('resize-handle resize-handle-corner');
         this.makeResizable(cornerHandle, 'corner');
     }
 
@@ -314,14 +425,14 @@ export class SpeedReaderModal extends Modal {
         let startWidth = 0;
         let startHeight = 0;
         
-        const modalContent = this.contentEl.parentElement as HTMLElement;
+        const modalEl = this.contentEl.parentElement as HTMLElement;
         
         handle.addEventListener('mousedown', (e) => {
             isResizing = true;
             startX = e.clientX;
             startY = e.clientY;
-            startWidth = parseInt(window.getComputedStyle(modalContent).width, 10);
-            startHeight = parseInt(window.getComputedStyle(modalContent).height, 10);
+            startWidth = parseInt(window.getComputedStyle(modalEl).width, 10);
+            startHeight = parseInt(window.getComputedStyle(modalEl).height, 10);
             
             e.preventDefault();
             document.addEventListener('mousemove', handleMouseMove);
@@ -336,12 +447,12 @@ export class SpeedReaderModal extends Modal {
             
             if (direction === 'right' || direction === 'corner') {
                 const newWidth = Math.max(400, startWidth + deltaX);
-                modalContent.style.width = newWidth + 'px';
+                modalEl.style.width = newWidth + 'px';
             }
             
             if (direction === 'bottom' || direction === 'corner') {
                 const newHeight = Math.max(300, startHeight + deltaY);
-                modalContent.style.height = newHeight + 'px';
+                modalEl.style.height = newHeight + 'px';
             }
         };
         
@@ -362,7 +473,7 @@ export class SpeedReaderModal extends Modal {
         let startLeft = 0;
         let startTop = 0;
         
-        const modalContent = this.contentEl.parentElement as HTMLElement;
+        const modalEl = this.contentEl.parentElement as HTMLElement;
         
         handle.addEventListener('mousedown', (e) => {
             if ((e.target as HTMLElement).tagName === 'BUTTON' || 
@@ -374,14 +485,14 @@ export class SpeedReaderModal extends Modal {
             startX = e.clientX;
             startY = e.clientY;
             
-            const rect = modalContent.getBoundingClientRect();
+            const rect = modalEl.getBoundingClientRect();
             startLeft = rect.left;
             startTop = rect.top;
             
-            modalContent.style.position = 'fixed';
-            modalContent.style.left = startLeft + 'px';
-            modalContent.style.top = startTop + 'px';
-            modalContent.style.margin = '0';
+            modalEl.style.position = 'fixed';
+            modalEl.style.left = startLeft + 'px';
+            modalEl.style.top = startTop + 'px';
+            modalEl.style.margin = '0';
             
             e.preventDefault();
             document.addEventListener('mousemove', handleMouseMove);
@@ -397,8 +508,8 @@ export class SpeedReaderModal extends Modal {
             const newLeft = Math.max(0, Math.min(window.innerWidth - 400, startLeft + deltaX));
             const newTop = Math.max(0, Math.min(window.innerHeight - 300, startTop + deltaY));
             
-            modalContent.style.left = newLeft + 'px';
-            modalContent.style.top = newTop + 'px';
+            modalEl.style.left = newLeft + 'px';
+            modalEl.style.top = newTop + 'px';
         };
         
         const handleMouseUp = () => {
@@ -412,14 +523,14 @@ export class SpeedReaderModal extends Modal {
     }
 
     private saveWindowState() {
-        const modalContent = this.contentEl.parentElement as HTMLElement;
-        const rect = modalContent.getBoundingClientRect();
+        const modalEl = this.contentEl.parentElement as HTMLElement;
+        const rect = modalEl.getBoundingClientRect();
         
         this.settings.windowState = {
-            left: modalContent.style.left || rect.left + 'px',
-            top: modalContent.style.top || rect.top + 'px',
-            width: modalContent.style.width || rect.width + 'px',
-            height: modalContent.style.height || rect.height + 'px'
+            left: modalEl.style.left || rect.left + 'px',
+            top: modalEl.style.top || rect.top + 'px',
+            width: modalEl.style.width || rect.width + 'px',
+            height: modalEl.style.height || rect.height + 'px'
         };
         
         this.plugin.saveSettings().catch((err: Error) => 
@@ -428,35 +539,35 @@ export class SpeedReaderModal extends Modal {
     }
 
     private restoreWindowState() {
-        const modalContent = this.contentEl.parentElement as HTMLElement;
+        const modalEl = this.contentEl.parentElement as HTMLElement;
         const state = this.settings.windowState;
         
         // Set default size if no state exists
         if (!state || state.left === 'auto' || state.top === 'auto') {
-            modalContent.style.width = '800px';  // wider default width
-            modalContent.style.height = '600px';
+            modalEl.style.width = '800px';  // wider default width
+            modalEl.style.height = '600px';
             return;
         }
 
         if (state.width !== 'auto') {
-            modalContent.style.width = state.width;
+            modalEl.style.width = state.width;
         }
         if (state.height !== 'auto') {
-            modalContent.style.height = state.height;
+            modalEl.style.height = state.height;
         }
         
         if (state.left !== 'auto' && state.top !== 'auto') {
-            modalContent.style.position = 'fixed';
-            modalContent.style.left = state.left;
-            modalContent.style.top = state.top;
-            modalContent.style.margin = '0';
+            modalEl.style.position = 'fixed';
+            modalEl.style.left = state.left;
+            modalEl.style.top = state.top;
+            modalEl.style.margin = '0';
             
-            this.ensureModalVisible(modalContent);
+            this.ensureModalVisible(modalEl);
         }
     }
 
-    private ensureModalVisible(modalContent: HTMLElement) {
-        const rect = modalContent.getBoundingClientRect();
+    private ensureModalVisible(modalEl: HTMLElement) {
+        const rect = modalEl.getBoundingClientRect();
         const viewWidth = window.innerWidth;
         const viewHeight = window.innerHeight;
         
@@ -476,8 +587,8 @@ export class SpeedReaderModal extends Modal {
             top = 20;
         }
         
-        modalContent.style.left = left + 'px';
-        modalContent.style.top = top + 'px';
+        modalEl.style.left = left + 'px';
+        modalEl.style.top = top + 'px';
     }
 
     onClose() {
@@ -487,6 +598,11 @@ export class SpeedReaderModal extends Modal {
 
         if ((this as any).saveTimeout) {
             clearTimeout((this as any).saveTimeout);
+        }
+
+        // Uklanjamo event listener za Escape
+        if ((this as any).escapeHandler) {
+            document.removeEventListener('keydown', (this as any).escapeHandler, true);
         }
 
         this.saveWindowState();
