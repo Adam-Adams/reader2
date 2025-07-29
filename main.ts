@@ -15,6 +15,21 @@ export interface SpeedReaderSettings {
     fontFamily: string;
     fontSize: number;
     letterSpacing: number;  // Dodato novo polje
+    // Nova RSVP podešavanja
+    rsvp?: {
+        displayMode: 'single-line' | 'multi-line' | 'ellipse';
+        singleLine?: {
+            wordsPerLine: number;
+        };
+        multiLine?: {
+            rows: number;
+            width: number; // širina pravougaonika u pikselima
+        };
+        ellipse?: {
+            width: number;
+            height: number;
+        };
+    };
     windowState: {
         left: string;
         top: string;
@@ -30,6 +45,10 @@ export interface SpeedReaderSettings {
         width: string;
         height: string;
     };
+    fontSettingsPosition?: {
+        left: string;
+        top: string;
+    };
 }
 
 const DEFAULT_SETTINGS: SpeedReaderSettings = {
@@ -40,6 +59,21 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
     fontFamily: 'Arial',
     fontSize: 24,
     letterSpacing: 0,  // Podrazumevana vrednost
+    // Nova RSVP podešavanja
+    rsvp: {
+        displayMode: 'ellipse',
+        singleLine: {
+            wordsPerLine: 8
+        },
+        multiLine: {
+            rows: 3,
+            width: 400
+        },
+        ellipse: {
+            width: 300,
+            height: 200
+        }
+    },
     windowState: {
         left: 'auto',
         top: 'auto', 
@@ -75,6 +109,10 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
         top: 'auto',
         width: '600px',
         height: '500px'
+    },
+    fontSettingsPosition: {
+        left: 'auto',
+        top: 'auto'
     }
 };
 

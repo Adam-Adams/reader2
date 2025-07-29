@@ -151,9 +151,19 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                     }),
             );
 
+        // Chunk size setting sa objašnjenjem po modovima
+        const displayMode = this.plugin.settings.rsvp?.displayMode || 'ellipse';
+        let chunkDescription = 'Number of words to display at once';
+        
+        if (displayMode === 'single-line') {
+            chunkDescription = 'Number of words to display at once (fixed chunk size in single-line mode)';
+        } else if (displayMode === 'multi-line' || displayMode === 'ellipse') {
+            chunkDescription = 'Starting chunk size (automatically adjusted based on display area)';
+        }
+
         new Setting(containerEl)
             .setName('Chunk size')
-            .setDesc('Number of words to display at once')
+            .setDesc(chunkDescription)
             .addText(text =>
                 text
                     .setPlaceholder('1')
@@ -173,5 +183,152 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                     await this.updateModalSettings();
                 }),
             );
+
+        // RSVP Display Settings sekcija
+        containerEl.createEl('h3', { text: 'RSVP Display Settings' });
+
+        new Setting(containerEl)
+            .setName('Display mode')
+            .setDesc('Choose how text is displayed')
+            .addDropdown(dropdown =>
+                dropdown
+                    .addOption('single-line', 'Single line')
+                    .addOption('multi-line', 'Multi-line rectangle')
+                    .addOption('ellipse', 'Ellipse')
+                    .setValue(this.plugin.settings.rsvp?.displayMode || 'ellipse')
+                    .onChange(async (value) => {
+                        if (!this.plugin.settings.rsvp) {
+                            this.plugin.settings.rsvp = {};
+                        }
+                        this.plugin.settings.rsvp.displayMode = value as 'single-line' | 'multi-line' | 'ellipse';
+                        await this.updateModalSettings();
+                        this.display(); // Refresh to show/hide relevant options
+                    }),
+            );
+
+        const currentDisplayMode = this.plugin.settings.rsvp?.displayMode || 'ellipse';
+
+        // Single line specific settings
+        if (currentDisplayMode === 'single-line') {
+            containerEl.createEl('div', { 
+                text: 'Note: In single-line mode, chunk size directly controls the number of words displayed.',
+                cls: 'setting-item-description'
+            });
+
+            new Setting(containerEl)
+                .setName('Line width (words)')
+                .setDesc('Maximum number of words per line in single-line mode')
+                .addText(text =>
+                    text
+                        .setPlaceholder('8')
+                        .setValue((this.plugin.settings.rsvp?.singleLine?.wordsPerLine || 8).toString())
+                        .onChange(async (value) => {
+                            if (!this.plugin.settings.rsvp) this.plugin.settings.rsvp = {};
+                            if (!this.plugin.settings.rsvp.singleLine) this.plugin.settings.rsvp.singleLine = {};
+                            this.plugin.settings.rsvp.singleLine.wordsPerLine = parseInt(value) || 8;
+                            await this.updateModalSettings();
+                        }),
+                );
+        }
+
+        // Multi-line specific settings
+        if (currentDisplayMode === 'multi-line') {
+            containerEl.createEl('div', { 
+                text: 'Note: In multi-line mode, chunk size is automatically adjusted to fit the rectangle area.',
+                cls: 'setting-item-description'
+            });
+
+            new Setting(containerEl)
+                .setName('Number of rows')
+                .setDesc('Number of text rows (1-7)')
+                .addSlider(slider =>
+                    slider
+                        .setLimits(1, 7, 1)
+                        .setValue(this.plugin.settings.rsvp?.multiLine?.rows || 3)
+                        .setDynamicTooltip()
+                        .onChange(async (value) => {
+                            if (!this.plugin.settings.rsvp) this.plugin.settings.rsvp = {};
+                            if (!this.plugin.settings.rsvp.multiLine) this.plugin.settings.rsvp.multiLine = {};
+                            this.plugin.settings.rsvp.multiLine.rows = value;
+                            await this.updateModalSettings();
+                        }),
+                )
+                .addText(text =>
+                    text
+                        .setPlaceholder('3')
+                        .setValue((this.plugin.settings.rsvp?.multiLine?.rows || 3).toString())
+                        .onChange(async (value) => {
+                            const num = parseInt(value);
+                            if (!isNaN(num) && num >= 1 && num <= 7) {
+                                if (!this.plugin.settings.rsvp) this.plugin.settings.rsvp = {};
+                                if (!this.plugin.settings.rsvp.multiLine) this.plugin.settings.rsvp.multiLine = {};
+                                this.plugin.settings.rsvp.multiLine.rows = num;
+                                await this.updateModalSettings();
+                            }
+                        }),
+                );
+
+            new Setting(containerEl)
+                .setName('Rectangle width')
+                .setDesc('Width of the rectangle in pixels')
+                .addText(text =>
+                    text
+                        .setPlaceholder('400')
+                        .setValue((this.plugin.settings.rsvp?.multiLine?.width || 400).toString())
+                        .onChange(async (value) => {
+                            const num = parseInt(value);
+                            if (!isNaN(num) && num >= 200 && num <= 800) {
+                                if (!this.plugin.settings.rsvp) this.plugin.settings.rsvp = {};
+                                if (!this.plugin.settings.rsvp.multiLine) this.plugin.settings.rsvp.multiLine = {};
+                                this.plugin.settings.rsvp.multiLine.width = num;
+                                await this.updateModalSettings();
+                            }
+                        }),
+                );
+        }
+
+        // Ellipse specific settings
+        if (currentDisplayMode === 'ellipse') {
+            containerEl.createEl('div', { 
+                text: 'Note: In ellipse mode, chunk size is automatically adjusted to fit the ellipse area.',
+                cls: 'setting-item-description'
+            });
+
+            new Setting(containerEl)
+                .setName('Ellipse width')
+                .setDesc('Width of the ellipse in pixels')
+                .addText(text =>
+                    text
+                        .setPlaceholder('300')
+                        .setValue((this.plugin.settings.rsvp?.ellipse?.width || 300).toString())
+                        .onChange(async (value) => {
+                            const num = parseInt(value);
+                            if (!isNaN(num) && num >= 200 && num <= 600) {
+                                if (!this.plugin.settings.rsvp) this.plugin.settings.rsvp = {};
+                                if (!this.plugin.settings.rsvp.ellipse) this.plugin.settings.rsvp.ellipse = {};
+                                this.plugin.settings.rsvp.ellipse.width = num;
+                                await this.updateModalSettings();
+                            }
+                        }),
+                );
+
+            new Setting(containerEl)
+                .setName('Ellipse height')
+                .setDesc('Height of the ellipse in pixels')
+                .addText(text =>
+                    text
+                        .setPlaceholder('200')
+                        .setValue((this.plugin.settings.rsvp?.ellipse?.height || 200).toString())
+                        .onChange(async (value) => {
+                            const num = parseInt(value);
+                            if (!isNaN(num) && num >= 100 && num <= 400) {
+                                if (!this.plugin.settings.rsvp) this.plugin.settings.rsvp = {};
+                                if (!this.plugin.settings.rsvp.ellipse) this.plugin.settings.rsvp.ellipse = {};
+                                this.plugin.settings.rsvp.ellipse.height = num;
+                                await this.updateModalSettings();
+                            }
+                        }),
+                );
+        }
     }
 }

@@ -1,23 +1,37 @@
 {
-  "wordsPerMinute": 2000,
-  "highlightColor": "#c26bb5",
-  "chunkSize": 3,
+  "wordsPerMinute": 500,
+  "highlightColor": "#e6a3dc",
+  "chunkSize": 5,
   "autoAdvance": true,
-  "fontFamily": "OpenDyslexic-Regular",
+  "fontFamily": "OpenDyslexic-Italic",
   "fontSize": 24,
   "letterSpacing": 0,
+  "rsvp": {
+    "displayMode": "ellipse",
+    "singleLine": {
+      "wordsPerLine": 6
+    },
+    "multiLine": {
+      "rows": 3,
+      "width": 600
+    },
+    "ellipse": {
+      "width": 500,
+      "height": 200
+    }
+  },
   "windowState": {
-    "left": "214px",
-    "top": "92.0875px",
-    "width": "780px",
-    "height": "589px"
+    "left": "220px",
+    "top": "87.0875px",
+    "width": "999px",
+    "height": "667px"
   },
   "textInputModalSettings": {
     "windowState": {
       "left": "193.6px",
       "top": "21px",
-      "width": "854px",
-      "height": "775px"
+      "width": "951px",
+      "height": "738px"
     }
   },
   "fileSelectionModalSettings": {
@@ -25,7 +39,7 @@
       "left": "223.2px",
       "top": "20px",
       "width": "840px",
-      "height": "775px"
+      "height": "757px"
     }
   },
   "wordSelectorModalSettings": {
@@ -37,13 +51,13 @@
     }
   },
   "wordSelectorWindowState": {
-    "left": "410.6px",
-    "top": "66px",
-    "width": "854px",
-    "height": "672px"
+    "left": "20px",
+    "top": "20px",
+    "width": "1228px",
+    "height": "705px"
   },
   "fontSettingsPosition": {
-    "left": "525px",
+    "left": "749px",
     "top": "254.55px"
   }
 }
