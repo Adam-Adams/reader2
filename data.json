@@ -1,7 +1,7 @@
 {
   "wordsPerMinute": 500,
-  "highlightColor": "#e6a3dc",
-  "chunkSize": 5,
+  "highlightColor": "#a3e6cf",
+  "chunkSize": 26,
   "autoAdvance": true,
   "fontFamily": "OpenDyslexic-Italic",
   "fontSize": 24,
@@ -9,7 +9,7 @@
   "rsvp": {
     "displayMode": "ellipse",
     "singleLine": {
-      "wordsPerLine": 6
+      "wordsPerLine": 7
     },
     "multiLine": {
       "rows": 3,

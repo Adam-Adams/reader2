@@ -32,7 +32,7 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-        containerEl.createEl('h2', { text: 'Speed Reader Settings' });
+        containerEl.createEl('h3', { text: 'Speed Reader Settings' });
 
         new Setting(containerEl)
             .setName('Words per minute')
@@ -201,6 +201,13 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                             this.plugin.settings.rsvp = {};
                         }
                         this.plugin.settings.rsvp.displayMode = value as 'single-line' | 'multi-line' | 'ellipse';
+                        
+                        // Update chunk size when switching to single-line mode
+                        if (value === 'single-line') {
+                            this.plugin.settings.chunkSize = 
+                                this.plugin.settings.rsvp.singleLine?.wordsPerLine || 8;
+                        }
+                        
                         await this.updateModalSettings();
                         this.display(); // Refresh to show/hide relevant options
                     }),
@@ -223,9 +230,16 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                         .setPlaceholder('8')
                         .setValue((this.plugin.settings.rsvp?.singleLine?.wordsPerLine || 8).toString())
                         .onChange(async (value) => {
+                            const wordsPerLine = parseInt(value) || 8;
                             if (!this.plugin.settings.rsvp) this.plugin.settings.rsvp = {};
                             if (!this.plugin.settings.rsvp.singleLine) this.plugin.settings.rsvp.singleLine = {};
-                            this.plugin.settings.rsvp.singleLine.wordsPerLine = parseInt(value) || 8;
+                            this.plugin.settings.rsvp.singleLine.wordsPerLine = wordsPerLine;
+                            
+                            // Update chunk size immediately when changing words per line
+                            if (this.plugin.settings.rsvp.displayMode === 'single-line') {
+                                this.plugin.settings.chunkSize = wordsPerLine;
+                            }
+                            
                             await this.updateModalSettings();
                         }),
                 );
