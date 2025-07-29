@@ -5,6 +5,7 @@ import { FONT_OPTIONS } from '../fontList';
 
 export interface CommandCallbacks {
     onUpdate: (text: string, words: string[], currentIndex: number) => void;
+    getCurrentChunkSize?: () => number; // Dodato za dobijanje trenutne chunk veličine
 }
 
 class FontSettingsModal extends Modal {
@@ -251,6 +252,7 @@ export class Commands {
     private words: string[] = [];
     private currentIndex: number = 0;
     private callbacks: CommandCallbacks;
+    private chunkInput: HTMLInputElement | null = null; // Reference za chunk input
 
     getCurrentIndex(): number {
         return this.currentIndex;
@@ -318,15 +320,15 @@ export class Commands {
 
         const chunkControl = this.controlsElement.createDiv('chunk-control');
         chunkControl.createEl('label', { text: 'Words: ' });
-        const chunkInput = chunkControl.createEl('input', {
+        this.chunkInput = chunkControl.createEl('input', {
             type: 'number',
             value: this.settings.chunkSize.toString(),
             cls: 'chunk-input'
-        });
-        chunkInput.min = '1';
-        chunkInput.max = '50';
+        }) as HTMLInputElement;
+        this.chunkInput.min = '1';
+        this.chunkInput.max = '50';
 
-        chunkInput.addEventListener('change', (e) => {
+        this.chunkInput.addEventListener('change', (e) => {
             const target = e.target as HTMLInputElement;
             this.settings.chunkSize = parseInt(target.value) || 1;
             this.plugin.saveSettings();
@@ -431,6 +433,13 @@ export class Commands {
         this.callbacks.onUpdate(this.text, this.words, this.currentIndex);
     }
 
+    // Dodana metoda za ažuriranje chunk input polja
+    updateChunkInput(chunkSize: number) {
+        if (this.chunkInput) {
+            this.chunkInput.value = chunkSize.toString();
+        }
+    }
+
     play() {
         if (this.words.length === 0) {
             new Notice('No text to read');
@@ -443,18 +452,72 @@ export class Commands {
 
         this.setPlayButtonState(true);
         this.isPlaying = true;
-        const interval = (60000 / this.settings.wordsPerMinute) * this.settings.chunkSize;
+        
+        // Dobij trenutnu chunk veličinu umesto korišćenja fiksne vrednosti
+        const getCurrentChunkSize = () => {
+            if (this.callbacks.getCurrentChunkSize) {
+                return this.callbacks.getCurrentChunkSize();
+            }
+            return this.settings.chunkSize; // Fallback
+        };
 
-        this.intervalId = window.setInterval(() => {
-            if (this.currentIndex >= this.words.length) {
-                this.pause();
-                new Notice('Reading complete!');
+        const playNextChunk = () => {
+            // Dobij trenutnu chunk veličinu pre napredovanja
+            const currentChunkSize = getCurrentChunkSize();
+            
+            // Ažuriraj chunk input polje sa trenutnom vrednošću
+            this.updateChunkInput(currentChunkSize);
+            
+            // Napreduj na sledeći chunk
+            this.currentIndex += currentChunkSize;
+            this.callbacks.onUpdate(this.text, this.words, this.currentIndex);
+            
+            // Proveri da li je ovo poslednja grupa reči (trenutni indeks je na kraju ili blizu kraja)
+            const isLastChunk = this.currentIndex >= this.words.length;
+            
+            if (isLastChunk) {
+                // Za poslednju grupu reči, sačekaj minimum 2 sekunde
+                this.intervalId = window.setTimeout(() => {
+                    this.pause();
+                    new Notice('Reading complete!');
+                }, 2000); // Minimum 2 sekunde za poslednju grupu
                 return;
             }
+            
+            // Proveri da li će sledeći chunk biti poslednji
+            const nextChunkSize = getCurrentChunkSize();
+            const willBeLastChunk = (this.currentIndex + nextChunkSize) >= this.words.length;
+            
+            let interval;
+            if (willBeLastChunk) {
+                // Ako će sledeći chunk biti poslednji, koristi minimum 2 sekunde
+                const normalInterval = (60000 / this.settings.wordsPerMinute) * nextChunkSize;
+                interval = Math.max(normalInterval, 2000); // Minimum 2 sekunde
+            } else {
+                // Inače koristi normalan interval
+                interval = (60000 / this.settings.wordsPerMinute) * nextChunkSize;
+            }
+            
+            // Postavi sledeći timeout
+            if (this.isPlaying) {
+                this.intervalId = window.setTimeout(playNextChunk, interval);
+            }
+        };
 
-            this.currentIndex += this.settings.chunkSize;
-            this.callbacks.onUpdate(this.text, this.words, this.currentIndex);
-        }, interval);
+        // Prvo prikaži trenutni chunk bez napredovanja
+        this.callbacks.onUpdate(this.text, this.words, this.currentIndex);
+        
+        // Dobij chunk veličinu za trenutni prikaz
+        const initialChunkSize = getCurrentChunkSize();
+        this.updateChunkInput(initialChunkSize);
+        
+        // Izračunaj interval za prvi prelazak na osnovu trenutno prikazanih reči
+        const initialInterval = (60000 / this.settings.wordsPerMinute) * initialChunkSize;
+        
+        // Postavi timeout za prvi prelazak
+        if (this.isPlaying) {
+            this.intervalId = window.setTimeout(playNextChunk, initialInterval);
+        }
 
         // Notify that play has started
         this.onPlay();
@@ -465,7 +528,7 @@ export class Commands {
         this.isPlaying = false;
 
         if (this.intervalId) {
-            clearInterval(this.intervalId);
+            clearTimeout(this.intervalId); // Koristimo clearTimeout umesto clearInterval
             this.intervalId = null;
         }
 
@@ -478,6 +541,12 @@ export class Commands {
         this.pause();
         this.currentIndex = 0;
         this.callbacks.onUpdate(this.text, this.words, this.currentIndex);
+        
+        // Resetuj chunk input na početnu vrednost
+        if (this.callbacks.getCurrentChunkSize) {
+            this.updateChunkInput(this.callbacks.getCurrentChunkSize());
+        }
+        
         // Notify that reset has occurred
         this.onReset();
     }
