@@ -19,6 +19,8 @@ export class SpeedReaderModal extends Modal {
     private fileButtons: FileButtons | null = null;
     private wordSelectorModal: WordSelectorModal | null = null;
     private headerEl?: HTMLElement;
+    private escapeHandler?: (e: KeyboardEvent) => void;
+    private spaceHandler?: (e: KeyboardEvent) => void;
 
     constructor(app: App, plugin: any, settings: SpeedReaderSettings) {
         super(app);
@@ -63,7 +65,28 @@ export class SpeedReaderModal extends Modal {
         };
 
         document.addEventListener('keydown', escapeHandler, true);
-        (this as any).escapeHandler = escapeHandler;
+        this.escapeHandler = escapeHandler;
+
+        // Add keyboard shortcut for Space to play/pause
+        this.spaceHandler = (e: KeyboardEvent) => {
+            if (e.key === ' ') {
+                const target = e.target as HTMLElement;
+                // Don't trigger if in an input field
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+                    return;
+                }
+                
+                e.preventDefault();
+                if (this.commands) {
+                    if (this.commands.getIsPlaying()) {
+                        this.commands.pause();
+                    } else {
+                        this.commands.play();
+                    }
+                }
+            }
+        };
+        document.addEventListener('keydown', this.spaceHandler, true);
 
         // Čeka da se modal potpuno učita pre traženja default close dugmeta
         setTimeout(() => this.setupDefaultCloseButton(), 200);
@@ -601,8 +624,13 @@ export class SpeedReaderModal extends Modal {
         }
 
         // Uklanjamo event listener za Escape
-        if ((this as any).escapeHandler) {
-            document.removeEventListener('keydown', (this as any).escapeHandler, true);
+        if (this.escapeHandler) {
+            document.removeEventListener('keydown', this.escapeHandler, true);
+        }
+        
+        // Remove Space key handler
+        if (this.spaceHandler) {
+            document.removeEventListener('keydown', this.spaceHandler, true);
         }
 
         this.saveWindowState();
