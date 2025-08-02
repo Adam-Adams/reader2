@@ -1,6 +1,13 @@
 import { SpeedReaderSettings } from '../main';
 
-export class RSVP {
+interface BaseReader {
+    updateSettings(settings: SpeedReaderSettings): void;
+    loadText(text: string): void;
+    destroy(): void;
+    applyStyles(): void;
+}
+
+export class RSVP implements BaseReader {
     private element: HTMLElement;
     private text: string;
     private words: string[];
@@ -37,6 +44,7 @@ export class RSVP {
         this.displayElement.style.fontFamily = this.settings.fontFamily || 'Arial';
         this.displayElement.style.fontSize = `${this.settings.fontSize || 24}px`;
         this.displayElement.style.letterSpacing = `${this.settings.letterSpacing || 0}px`;
+        this.displayElement.style.fontWeight = 'normal';
         this.displayElement.style.display = 'flex';
         this.displayElement.style.alignItems = 'center';
         this.displayElement.style.justifyContent = 'center';
@@ -124,6 +132,18 @@ export class RSVP {
     public updateSettings(settings: SpeedReaderSettings) {
         this.settings = settings;
         this.applyStyles();
+    }
+
+    public loadText(text: string): void {
+        this.text = text;
+        this.words = text.split(/\s+/).filter(word => word.length > 0);
+        this.currentIndex = 0;
+        this.render();
+    }
+
+    public destroy(): void {
+        this.displayElement?.remove();
+        this.displayElement = null as any;
     }
 
     private getOptimalChunkSize(startIndex: number): number {
