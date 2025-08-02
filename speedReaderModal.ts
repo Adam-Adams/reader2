@@ -2,6 +2,7 @@ import { App, Modal, TFile, Notice } from 'obsidian';
 import { SpeedReaderSettings } from './main';
 import { MiniPreview } from './readers/miniPreview';
 import { RSVP } from './readers/RSVP';
+import { LinearReader } from './readers/Linear';
 import { Commands } from './readers/commands';
 import { Progress } from './readers/progress';
 import { FileButtons } from './readers/fileButtons';
@@ -13,7 +14,7 @@ export class SpeedReaderModal extends Modal {
     private text: string = '';
     private words: string[] = [];
     private miniPreview: MiniPreview | null = null;
-    private rsvp: RSVP | null = null;
+    private reader: RSVP | LinearReader | null = null;
     private commands: Commands | null = null;
     private progress: Progress | null = null;
     private fileButtons: FileButtons | null = null;
@@ -218,11 +219,10 @@ export class SpeedReaderModal extends Modal {
         this.settings = settings;
         
         // Ažuriraj sve komponente sa novim podešavanjima
-        if (this.rsvp) {
-            this.rsvp.updateSettings(settings);
-            // Primeni nove postavke odmah
-            this.rsvp.applyStyles();
-        }
+            if (this.reader) {
+                this.reader.updateSettings(settings);
+                this.reader.applyStyles();
+            }
         /* if (this.miniPreview) {
             this.miniPreview.updateSettings(settings);
         }
@@ -296,7 +296,14 @@ export class SpeedReaderModal extends Modal {
         leftSection.style.minWidth = '0';
 
         // Create RSVP section
-        this.rsvp = new RSVP(leftSection, this.settings);
+        // Create reader based on selection
+        const readerType = this.settings.readerType || 'rsvp';
+        
+        if (readerType === 'linear') {
+            this.reader = new LinearReader(leftSection, this.settings, () => {});
+        } else {
+            this.reader = new RSVP(leftSection, this.settings, () => {});
+        }
 
         // Create commands section
         const commandsSection = leftSection.createDiv('speed-reader-commands-section');
@@ -330,9 +337,9 @@ export class SpeedReaderModal extends Modal {
             },
             {
                 onUpdate: (text: string, words: string[], currentIndex: number) => {
-                    if (this.rsvp) {
-                        this.rsvp.update(text, words, currentIndex);
-                    }
+            if (this.reader) {
+                this.reader.update(text, words, currentIndex);
+            }
                     if (this.miniPreview) {
                         this.miniPreview.update(text, words, currentIndex);
                     }

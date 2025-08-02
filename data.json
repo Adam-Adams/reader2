@@ -1,28 +1,15 @@
 {
   "wordsPerMinute": 500,
   "highlightColor": "#6bffba",
-  "chunkSize": 30,
+  "chunkSize": 6,
   "autoAdvance": true,
-  "fontFamily": "Lexend-Regular",
+  "fontFamily": "Arial",
   "fontSize": 26,
   "letterSpacing": 0,
-  "rsvp": {
-    "displayMode": "ellipse",
-    "singleLine": {
-      "wordsPerLine": 6
-    },
-    "multiLine": {
-      "rows": 3,
-      "width": 400
-    },
-    "ellipse": {
-      "width": 500,
-      "height": 300
-    }
-  },
+  "readerType": "linear",
   "windowState": {
-    "left": "163px",
-    "top": "41px",
+    "left": "226px",
+    "top": "56px",
     "width": "977px",
     "height": "710px"
   },
@@ -59,5 +46,8 @@
   "fontSettingsPosition": {
     "left": "834px",
     "top": "249.863px"
+  },
+  "linear": {
+    "displayMode": "normal"
   }
 }

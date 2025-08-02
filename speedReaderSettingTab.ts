@@ -184,17 +184,42 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                 }),
             );
 
-        // RSVP Display Settings sekcija
-        containerEl.createEl('h3', { text: 'RSVP Display Settings' });
+        // Reader Display Settings section
+        containerEl.createEl('h3', { text: 'Reader Display Settings' });
 
-        new Setting(containerEl)
-            .setName('Display mode')
-            .setDesc('Choose how text is displayed')
-            .addDropdown(dropdown =>
-                dropdown
-                    .addOption('single-line', 'Single line')
-                    .addOption('multi-line', 'Multi-line rectangle')
-                    .addOption('ellipse', 'Ellipse')
+            new Setting(containerEl)
+                .setName('Reader type')
+                .setDesc('Choose reading mode')
+                .addDropdown(dropdown =>
+                    dropdown
+                        .addOption('rsvp', 'RSVP')
+                        .addOption('linear', 'Linear')
+                        .setValue(this.plugin.settings.readerType || 'rsvp')
+                        .onChange(async (value) => {
+                            this.plugin.settings.readerType = value as 'rsvp' | 'linear';
+                            // Reset display mode when changing reader type
+                            if (value === 'linear') {
+                                this.plugin.settings.rsvp = undefined;
+                            } else {
+                                if (!this.plugin.settings.rsvp) {
+                                    this.plugin.settings.rsvp = { displayMode: 'ellipse' };
+                                }
+                            }
+                            await this.updateModalSettings();
+                            this.display(); // Refresh settings UI
+                        })
+                );
+
+        // Reader Display Settings (shown based on reader type)
+        if (this.plugin.settings.readerType === 'rsvp') {
+            new Setting(containerEl)
+                .setName('RSVP display mode')
+                .setDesc('Choose how text is displayed in RSVP mode')
+                .addDropdown(dropdown =>
+                    dropdown
+                        .addOption('single-line', 'Single line')
+                        .addOption('multi-line', 'Multi-line rectangle')
+                        .addOption('ellipse', 'Ellipse')
                     .setValue(this.plugin.settings.rsvp?.displayMode || 'ellipse')
                     .onChange(async (value) => {
                         if (!this.plugin.settings.rsvp) {
@@ -212,6 +237,83 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                         this.display(); // Refresh to show/hide relevant options
                     }),
             );
+        } else if (this.plugin.settings.readerType === 'linear') {
+            // Linear display mode settings
+            new Setting(containerEl)
+                .setName('Linear display mode')
+                .setDesc('Choose how text is displayed in Linear mode')
+                .addDropdown(dropdown =>
+                    dropdown
+                        .addOption('normal', 'Normal')
+                        .addOption('words', 'Words')
+                        .addOption('left-right', 'Left Right')
+                        .addOption('row', 'Row')
+                    .setValue(this.plugin.settings.linear?.displayMode || 'normal')
+                    .onChange(async (value) => {
+                        if (!this.plugin.settings.linear) {
+                            this.plugin.settings.linear = {};
+                        }
+                        this.plugin.settings.linear.displayMode = value as 'normal' | 'words' | 'left-right' | 'row';
+                        await this.updateModalSettings();
+                        this.display(); // Refresh to show/hide relevant options
+                    }),
+            );
+
+            // Common linear settings
+            new Setting(containerEl)
+                .setName('Rectangle width')
+                .setDesc('Width of the rectangle in pixels')
+                .addText(text =>
+                    text
+                        .setPlaceholder('400')
+                        .setValue((this.plugin.settings.linear?.width || 400).toString())
+                        .onChange(async (value) => {
+                            const num = parseInt(value);
+                            if (!isNaN(num) && num >= 200 && num <= 800) {
+                                if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
+                                this.plugin.settings.linear.width = num;
+                                await this.updateModalSettings();
+                            }
+                        }),
+                );
+
+            new Setting(containerEl)
+                .setName('Rectangle height')
+                .setDesc('Height of the rectangle in pixels')
+                .addText(text =>
+                    text
+                        .setPlaceholder('200')
+                        .setValue((this.plugin.settings.linear?.height || 200).toString())
+                        .onChange(async (value) => {
+                            const num = parseInt(value);
+                            if (!isNaN(num) && num >= 100 && num <= 400) {
+                                if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
+                                this.plugin.settings.linear.height = num;
+                                await this.updateModalSettings();
+                            }
+                        }),
+                );
+
+            // Words mode specific setting
+            if (this.plugin.settings.linear?.displayMode === 'words') {
+                new Setting(containerEl)
+                    .setName('Words')
+                    .setDesc('Number of words to display at once')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('1')
+                            .setValue((this.plugin.settings.linear?.wordsCount || 1).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 1 && num <= 10) {
+                                    if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
+                                    this.plugin.settings.linear.wordsCount = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+            }
+        }
 
         const currentDisplayMode = this.plugin.settings.rsvp?.displayMode || 'ellipse';
 
@@ -301,8 +403,8 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                 );
         }
 
-        // Ellipse specific settings
-        if (currentDisplayMode === 'ellipse') {
+        // Ellipse specific settings (only for RSVP mode)
+        if (this.plugin.settings.readerType === 'rsvp' && currentDisplayMode === 'ellipse') {
             containerEl.createEl('div', { 
                 text: 'Note: In ellipse mode, chunk size is automatically adjusted to fit the ellipse area.',
                 cls: 'setting-item-description'

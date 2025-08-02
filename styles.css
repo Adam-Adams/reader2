@@ -169,13 +169,6 @@
     background: var(--background-secondary);
 }
 
-.current-word {
-    font-size: 2em;
-    font-weight: bold;
-    margin-bottom: 10px;
-    color: var(--text-normal);
-}
-
 .position-info {
     color: var(--text-muted);
     font-size: 0.9em;
@@ -293,8 +286,8 @@
 
 .current-word {
     font-size: 2em;
-    font-weight: bold;
     margin-bottom: 10px;
+    color: var(--text-normal);
 }
 
 .position-info {

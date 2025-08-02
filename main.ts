@@ -14,7 +14,8 @@ export interface SpeedReaderSettings {
     autoAdvance: boolean;
     fontFamily: string;
     fontSize: number;
-    letterSpacing: number;  // Dodato novo polje
+    letterSpacing: number;
+    readerType: 'rsvp' | 'linear';
     // Nova RSVP podešavanja
     rsvp?: {
         displayMode: 'single-line' | 'multi-line' | 'ellipse';
@@ -58,7 +59,8 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
     autoAdvance: true,
     fontFamily: 'Arial',
     fontSize: 24,
-    letterSpacing: 0,  // Podrazumevana vrednost
+    letterSpacing: 0,
+    readerType: 'rsvp',
     // Nova RSVP podešavanja
     rsvp: {
         displayMode: 'ellipse',
