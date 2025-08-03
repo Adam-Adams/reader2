@@ -295,18 +295,27 @@ export class SpeedReaderModal extends Modal {
         leftSection.style.flexDirection = 'column';
         leftSection.style.minWidth = '0';
 
-        // Create RSVP section
+        // Create reader container at the top
+        const readerContainer = leftSection.createDiv('speed-reader-container');
+        readerContainer.style.flex = '1';
+        readerContainer.style.minHeight = '0';
+        readerContainer.style.display = 'flex';
+        readerContainer.style.flexDirection = 'column';
+        readerContainer.style.overflow = 'hidden';
+
         // Create reader based on selection
         const readerType = this.settings.readerType || 'rsvp';
         
         if (readerType === 'linear') {
-            this.reader = new LinearReader(leftSection, this.settings, () => {});
+            this.reader = new LinearReader(readerContainer, this.settings, () => {});
         } else {
-            this.reader = new RSVP(leftSection, this.settings, () => {});
+            this.reader = new RSVP(readerContainer, this.settings, () => {});
         }
 
-        // Create commands section
+        // Create commands section below reader
         const commandsSection = leftSection.createDiv('speed-reader-commands-section');
+        commandsSection.style.flexShrink = '0';
+        commandsSection.style.marginTop = '10px';
         
         // Create progress bar
         this.progress = new Progress(commandsSection);
