@@ -65,6 +65,8 @@ export class RSVP implements BaseReader {
                 this.applyMultiLineStyles();
                 break;
             case 'ellipse':
+                this.applyEllipseStyles();
+                break;
             default:
                 this.applySingleLineStyles();
                 break;
