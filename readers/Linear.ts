@@ -45,7 +45,16 @@ export class LinearReader implements BaseReader {
         this.onChunkSizeChange = onChunkSizeChange || (() => {});
         this.isPlaying = false;
         
-        this.displayElement = this.element.createDiv('speed-reader-display');
+        // Create text section wrapper for centering
+        const textSection = this.element.createDiv('speed-reader-text-section');
+        this.displayElement = textSection.createDiv('speed-reader-display');
+        
+        // Add placeholder
+        this.displayElement.createEl('div', { 
+            text: 'Select text or load a file to start reading',
+            cls: 'placeholder-text'
+        });
+        
         this.applyStyles();
     }
 
@@ -95,6 +104,20 @@ export class LinearReader implements BaseReader {
     }
 
     public applyStyles() {
+        const linearSettings = this.settings.linear || { displayMode: 'words', width: 600, height: 300, wordsCount: 1 };
+        
+        // Set parent text section styles for centering
+        const textSection = this.displayElement.parentElement;
+        if (textSection) {
+            textSection.style.display = 'flex';
+            textSection.style.alignItems = 'center';
+            textSection.style.justifyContent = 'center';
+            textSection.style.flex = '1';
+            textSection.style.padding = '20px';
+            textSection.style.background = 'var(--background-secondary)';
+        }
+        
+        // Apply display element styles based on linear settings
         this.displayElement.style.fontFamily = this.settings.fontFamily || 'Arial';
         this.displayElement.style.fontSize = `${this.settings.fontSize || 24}px`;
         this.displayElement.style.letterSpacing = `${this.settings.letterSpacing || 0}px`;
@@ -110,9 +133,9 @@ export class LinearReader implements BaseReader {
         this.displayElement.style.border = '1px solid var(--background-modifier-border)';
         this.displayElement.style.background = 'var(--background-primary)';
         this.displayElement.style.whiteSpace = 'normal';
-        this.displayElement.style.width = `600px`;
-        this.displayElement.style.height = `300px`;
-        this.displayElement.style.minHeight = '300px';
+        this.displayElement.style.width = `${linearSettings.width || 600}px`;
+        this.displayElement.style.height = `${linearSettings.height || 300}px`;
+        this.displayElement.style.minHeight = `${linearSettings.height || 300}px`;
         this.displayElement.style.maxHeight = '100vh';
         this.displayElement.style.wordBreak = 'break-word';
         this.displayElement.style.overflowX = 'hidden';
@@ -121,18 +144,25 @@ export class LinearReader implements BaseReader {
         this.displayElement.style.scrollBehavior = 'smooth';
         this.displayElement.style.scrollbarGutter = 'stable';
         this.displayElement.style.overscrollBehavior = 'contain';
-        this.displayElement.style.flex = '1';
-        this.displayElement.style.display = 'flex';
-        this.displayElement.style.flexDirection = 'column';
+        this.displayElement.style.borderRadius = '8px';
+        
+        // Ensure the display element is centered
+        this.displayElement.style.margin = '0 auto';
+        this.displayElement.style.flexShrink = '0';
     }
 
     public updateSettings(settings: SpeedReaderSettings): void {
         this.settings = settings;
+        
+        // Apply new styles
+        this.applyStyles();
+        
         if (this.virtualContainer) {
             this.virtualContainer.style.fontFamily = settings.fontFamily || 'Arial';
             this.virtualContainer.style.fontSize = `${settings.fontSize || 24}px`;
             this.virtualContainer.style.letterSpacing = `${settings.letterSpacing || 0}px`;
         }
+        
         // Re-prepare virtualization with new settings
         this.prepareVirtualization();
         this.createVirtualContainer();
@@ -169,6 +199,11 @@ export class LinearReader implements BaseReader {
             placeholderEl.style.fontFamily = this.settings.fontFamily || 'Arial';
             placeholderEl.style.fontSize = `${this.settings.fontSize || 24}px`;
             placeholderEl.style.color = '#999';
+            placeholderEl.style.textAlign = 'center';
+            placeholderEl.style.display = 'flex';
+            placeholderEl.style.alignItems = 'center';
+            placeholderEl.style.justifyContent = 'center';
+            placeholderEl.style.height = '100%';
             return;
         }
 
@@ -256,7 +291,8 @@ export class LinearReader implements BaseReader {
         let globalWordIndex = 0;
         let cumulativeHeight = 0;
         
-        const containerWidth = this.displayElement?.clientWidth || 600;
+        const linearSettings = this.settings.linear || { width: 600 };
+        const containerWidth = (linearSettings.width || 600) - 20; // Account for padding
         
         this.lines.forEach((line, index) => {
             const wordsInLine = line.trim().split(/\s+/).filter(word => word.length > 0);
@@ -490,7 +526,12 @@ export class LinearReader implements BaseReader {
         // Zatim očisti prethodno označene reči
         this.highlightedWords = [];
 
-        const chunkSize = this.settings.chunkSize || 1;
+        // Get chunk size from linear settings or use chunkSize
+        const linearSettings = this.settings.linear || { wordsCount: 1 };
+        const chunkSize = linearSettings.displayMode === 'words' ? 
+            (linearSettings.wordsCount || 1) : 
+            (this.settings.chunkSize || 1);
+
         for (let i = 0; i < chunkSize && (this.currentIndex + i) < this.words.length; i++) {
             const wordIndex = this.currentIndex + i;
             const wordElement = this.wordElements[wordIndex];
@@ -550,5 +591,13 @@ export class LinearReader implements BaseReader {
             top: clampedScroll,
             behavior: 'smooth'
         });
+    }
+
+    // Helper method to get current chunk size for external use
+    public getCurrentChunkSize(): number {
+        const linearSettings = this.settings.linear || { wordsCount: 1 };
+        return linearSettings.displayMode === 'words' ? 
+            (linearSettings.wordsCount || 1) : 
+            (this.settings.chunkSize || 1);
     }
 }
