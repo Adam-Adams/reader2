@@ -254,6 +254,10 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                             this.plugin.settings.linear = {};
                         }
                         this.plugin.settings.linear.displayMode = value as 'normal' | 'words' | 'left-right' | 'row';
+                        // Update chunk size when switching to words mode
+                        if (value === 'words') {
+                            this.plugin.settings.chunkSize = this.plugin.settings.linear?.wordsCount || 1;
+                        }
                         await this.updateModalSettings();
                         this.display(); // Refresh to show/hide relevant options
                     }),
@@ -308,6 +312,13 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                                 if (!isNaN(num) && num >= 1 && num <= 10) {
                                     if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
                                     this.plugin.settings.linear.wordsCount = num;
+                                    
+                                    // Only update chunk size if in linear words mode
+                                    if (this.plugin.settings.readerType === 'linear' && 
+                                        this.plugin.settings.linear.displayMode === 'words') {
+                                        this.plugin.settings.chunkSize = num;
+                                    }
+                                    
                                     await this.updateModalSettings();
                                 }
                             }),

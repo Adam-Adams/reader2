@@ -31,6 +31,13 @@ export interface SpeedReaderSettings {
             height: number;
         };
     };
+    // Nova Linear podešavanja
+    linear?: {
+        displayMode?: 'normal' | 'words' | 'left-right' | 'row';
+        width?: number;
+        height?: number;
+        wordsCount?: number;
+    };
     windowState: {
         left: string;
         top: string;
