@@ -50,9 +50,47 @@ export class LinearReader implements BaseReader {
     }
 
     public loadText(text: string): void {
+        // Kompletno resetovanje stanja
         this.text = text;
         this.words = text.split(/\s+/).filter(word => word.length > 0);
         this.currentIndex = 0;
+        
+        // Resetovanje svih nizova i stanja
+        this.wordElements = [];
+        this.highlightedWords = [];
+        this.visibleLines = [];
+        this.lines = [];
+        this.lineWordMappings = [];
+        this.totalHeight = 0;
+        this.totalLines = 0;
+        this.visibleStartIndex = 0;
+        this.visibleEndIndex = 0;
+        this.scrollPosition = 0;
+        
+        // Zaustavljanje svih animacija
+        if (this.renderFrameId) {
+            cancelAnimationFrame(this.renderFrameId);
+            this.renderFrameId = undefined;
+        }
+        this.isRendering = false;
+        
+        // Uklanjanje postojećeg virtualnog kontejnera
+        if (this.virtualContainer) {
+            this.virtualContainer.remove();
+            this.virtualContainer = undefined;
+        }
+        
+        // Uklanjanje scroll timeout
+        if (this.scrollTimeout) {
+            clearTimeout(this.scrollTimeout);
+            this.scrollTimeout = undefined;
+        }
+        
+        // Resetovanje scroll pozicije
+        this.displayElement.scrollTop = 0;
+        
+        // Forsiraj potpuno re-renderovanje
+        this.isFullRender = true;
         this.render();
     }
 
@@ -61,18 +99,31 @@ export class LinearReader implements BaseReader {
         this.displayElement.style.fontSize = `${this.settings.fontSize || 24}px`;
         this.displayElement.style.letterSpacing = `${this.settings.letterSpacing || 0}px`;
         this.displayElement.style.display = 'flex';
-        this.displayElement.style.alignItems = 'center';
-        this.displayElement.style.justifyContent = 'center';
-        this.displayElement.style.textAlign = 'center';
-        this.displayElement.style.padding = '20px';
+        this.displayElement.style.flexDirection = 'column';
+        this.displayElement.style.textAlign = 'left';
+        this.displayElement.style.padding = '10px';
         this.displayElement.style.boxSizing = 'border-box';
         this.displayElement.style.wordWrap = 'break-word';
         this.displayElement.style.overflowWrap = 'break-word';
         this.displayElement.style.hyphens = 'auto';
-        this.displayElement.style.lineHeight = '1.2';
-        this.displayElement.style.border = '2px solid var(--background-modifier-border)';
-        this.displayElement.style.borderRadius = '8px';
-        this.displayElement.style.background = 'var(--background-secondary)';
+        this.displayElement.style.lineHeight = '1.4';
+        this.displayElement.style.border = '1px solid var(--background-modifier-border)';
+        this.displayElement.style.background = 'var(--background-primary)';
+        this.displayElement.style.whiteSpace = 'normal';
+        this.displayElement.style.width = `600px`;
+        this.displayElement.style.height = `300px`;
+        this.displayElement.style.minHeight = '300px';
+        this.displayElement.style.maxHeight = '100vh';
+        this.displayElement.style.wordBreak = 'break-word';
+        this.displayElement.style.overflowX = 'hidden';
+        this.displayElement.style.overflowY = 'auto';
+        this.displayElement.style.position = 'relative';
+        this.displayElement.style.scrollBehavior = 'smooth';
+        this.displayElement.style.scrollbarGutter = 'stable';
+        this.displayElement.style.overscrollBehavior = 'contain';
+        this.displayElement.style.flex = '1';
+        this.displayElement.style.display = 'flex';
+        this.displayElement.style.flexDirection = 'column';
     }
 
     public updateSettings(settings: SpeedReaderSettings): void {
@@ -82,15 +133,31 @@ export class LinearReader implements BaseReader {
             this.virtualContainer.style.fontSize = `${settings.fontSize || 24}px`;
             this.virtualContainer.style.letterSpacing = `${settings.letterSpacing || 0}px`;
         }
+        // Re-prepare virtualization with new settings
+        this.prepareVirtualization();
+        this.createVirtualContainer();
+        this.calculateVisibleRange();
+        this.requestRender();
         this.highlightCurrentWords();
     }
 
     public update(text: string, words: string[], currentIndex: number) {
-        this.text = text;
-        this.words = words;
+        console.log('LinearReader update called with text:', text.substring(0, 100));
+        
+        // Ako se text promenio, tretirati kao potpuno novo učitavanje
+        if (this.text !== text) {
+            console.log('Text changed, doing full reload');
+            this.loadText(text);
+            return;
+        }
+        
+        // Inače samo ažurirati trenutni indeks
         this.currentIndex = currentIndex;
-        this.render();
+        this.highlightCurrentWords();
+        this.scrollToCurrentWord();
     }
+
+    private isFullRender = false;
 
     private render() {
         if (this.words.length === 0) {
@@ -105,35 +172,46 @@ export class LinearReader implements BaseReader {
             return;
         }
 
+        // Skip full re-render if only moving between words in same text
+        if (this.virtualContainer && this.virtualContainer.parentElement && !this.isFullRender) {
+            this.highlightCurrentWords();
+            this.scrollToCurrentWord();
+            return;
+        }
+
+        this.isFullRender = false;
+        
+        // Kompletno očišćavanje display elementa
         this.displayElement.empty();
         
-        if (this.currentIndex < this.words.length) {
-            const chunk = [];
-            for (let i = 0; i < this.settings.chunkSize && (this.currentIndex + i) < this.words.length; i++) {
-                chunk.push(this.words[this.currentIndex + i]);
-            }
-            
-            const wordEl = this.displayElement.createEl('div', { cls: 'current-word' });
-            wordEl.textContent = chunk.join(' ');
-            wordEl.style.color = this.settings.highlightColor || '#ff6b6b';
-            wordEl.style.fontFamily = this.settings.fontFamily || 'Arial';
-            wordEl.style.fontSize = `${this.settings.fontSize || 24}px`;
-            wordEl.style.letterSpacing = `${this.settings.letterSpacing || 0}px`;
-            wordEl.style.textAlign = 'center';
-            wordEl.style.margin = '0';
-            wordEl.style.display = 'inline-block';
-            wordEl.style.whiteSpace = 'nowrap';
-            wordEl.style.width = 'auto';
-        } else {
-            const completeEl = this.displayElement.createEl('div', { 
-                text: 'Reading complete!',
-                cls: 'complete-text'
-            });
-            completeEl.style.color = this.settings.highlightColor || '#ff6b6b';
-            completeEl.style.fontFamily = this.settings.fontFamily || 'Arial';
-            completeEl.style.fontSize = `${this.settings.fontSize || 24}px`;
-        }
+        // Uklanjanje scroll event listenera pre kreiranja novih
+        this.displayElement.removeEventListener('scroll', this.scrollHandler);
+        
+        this.prepareVirtualization();
+        this.createVirtualContainer();
+        
+        this.calculateVisibleRange();
+        this.requestRender();
+        this.scrollToCurrentWord();
     }
+
+    // Scroll handler kao klasna metoda
+    private scrollTimeout?: NodeJS.Timeout;
+    
+    private scrollHandler = (event: Event) => {
+        if (this.isRendering) return;
+        if (this.scrollTimeout) {
+            clearTimeout(this.scrollTimeout);
+        }
+        this.scrollTimeout = setTimeout(() => {
+            const newScroll = this.displayElement.scrollTop;
+            if (Math.abs(this.scrollPosition - newScroll) > 1) {
+                this.scrollPosition = newScroll;
+                this.calculateVisibleRange();
+                this.requestRender();
+            }
+        }, 16);
+    };
 
     public start(): void {
         this.isPlaying = true;
@@ -144,11 +222,21 @@ export class LinearReader implements BaseReader {
     }
 
     public destroy(): void {
+        if (this.renderFrameId) {
+            cancelAnimationFrame(this.renderFrameId);
+        }
         if (this.virtualContainer) {
             this.virtualContainer.remove();
         }
+        if (this.scrollTimeout) {
+            clearTimeout(this.scrollTimeout);
+        }
+        // Uklanjanje event listenera
+        this.displayElement.removeEventListener('scroll', this.scrollHandler);
+        
         this.wordElements = [];
         this.highlightedWords = [];
+        this.visibleLines = [];
     }
 
     public getCurrentIndex(): number {
@@ -168,7 +256,7 @@ export class LinearReader implements BaseReader {
         let globalWordIndex = 0;
         let cumulativeHeight = 0;
         
-        const containerWidth = this.element.clientWidth;
+        const containerWidth = this.displayElement?.clientWidth || 600;
         
         this.lines.forEach((line, index) => {
             const wordsInLine = line.trim().split(/\s+/).filter(word => word.length > 0);
@@ -193,10 +281,10 @@ export class LinearReader implements BaseReader {
     }
 
     private calculateVisibleRange() {
-        if (!this.container) return;
+        if (!this.displayElement) return;
         
-        const containerHeight = this.container.clientHeight;
-        const scrollTop = this.container.scrollTop;
+        const containerHeight = this.displayElement.clientHeight;
+        const scrollTop = this.displayElement.scrollTop;
         
         let startIndex = 0;
         let endIndex = this.totalLines - 1;
@@ -227,7 +315,7 @@ export class LinearReader implements BaseReader {
     }
 
     private renderVisibleLines() {
-        if (!this.container || !this.virtualContainer) return;
+        if (!this.displayElement || !this.virtualContainer) return;
         
         this.visibleLines.forEach(line => line.remove());
         this.visibleLines = [];
@@ -329,42 +417,77 @@ export class LinearReader implements BaseReader {
     }
 
     private createVirtualContainer() {
-        if (!this.container) return;
+        if (!this.displayElement) return;
 
         if (this.virtualContainer) {
             this.virtualContainer.remove();
         }
 
         this.virtualContainer = document.createElement('div');
-        this.virtualContainer.style.position = 'relative';
+        this.virtualContainer.style.position = 'absolute';
         this.virtualContainer.style.height = `${this.totalHeight}px`;
         this.virtualContainer.style.width = '100%';
-        this.virtualContainer.style.overflow = 'hidden';
+        this.virtualContainer.style.overflow = 'visible';
+        this.virtualContainer.style.top = '0';
+        this.virtualContainer.style.left = '0';
+        this.virtualContainer.style.pointerEvents = 'none';
+        this.virtualContainer.style.boxSizing = 'border-box';
+        this.virtualContainer.style.willChange = 'transform';
         
-        this.container.appendChild(this.virtualContainer);
+        this.displayElement.style.overflowY = 'auto';
+        this.displayElement.style.scrollbarWidth = 'thin';
+        this.displayElement.style.scrollbarColor = 'var(--scrollbar-thumb-bg) var(--scrollbar-bg)';
+        this.displayElement.style.position = 'relative';
+        this.displayElement.style.overflowX = 'hidden';
         
-        let scrollTimeout: NodeJS.Timeout;
-        this.container.addEventListener('scroll', () => {
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                this.scrollPosition = this.container.scrollTop;
-                this.calculateVisibleRange();
-                this.requestRender();
-            }, 16);
-        });
+        const style = document.createElement('style');
+        style.textContent = `
+            .speed-reader-display {
+                scrollbar-width: thin;
+                scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-bg);
+            }
+            .speed-reader-display::-webkit-scrollbar {
+                width: 12px;
+                height: 12px;
+            }
+            .speed-reader-display::-webkit-scrollbar-track {
+                background: var(--scrollbar-bg);
+                border-radius: 6px;
+            }
+            .speed-reader-display::-webkit-scrollbar-thumb {
+                background: var(--scrollbar-thumb-bg);
+                border-radius: 6px;
+                border: 2px solid var(--scrollbar-bg);
+            }
+            .speed-reader-display::-webkit-scrollbar-thumb:hover {
+                background: var(--scrollbar-thumb-bg-hover);
+            }
+        `;
+        if (!document.querySelector('style[data-linear-reader]')) {
+            style.setAttribute('data-linear-reader', 'true');
+            document.head.appendChild(style);
+        }
+        
+        this.displayElement.appendChild(this.virtualContainer);
+        
+        // Dodaj event listener
+        this.displayElement.addEventListener('scroll', this.scrollHandler, { passive: true });
         
         this.calculateVisibleRange();
         this.requestRender();
     }
 
     private highlightCurrentWords() {
-        this.highlightedWords.forEach(el => {
-            if (el.parentElement) {
+        // Prvo postavi sve reči na neaktivnu boju
+        this.wordElements.forEach(el => {
+            if (el && el.parentElement) {
                 el.style.backgroundColor = 'transparent';
-                el.style.color = 'inherit';
-                el.style.fontWeight = 'normal';
+                el.style.color = 'var(--text-muted)';
+                el.style.fontWeight = 'inherit';
             }
         });
+
+        // Zatim očisti prethodno označene reči
         this.highlightedWords = [];
 
         const chunkSize = this.settings.chunkSize || 1;
@@ -373,48 +496,59 @@ export class LinearReader implements BaseReader {
             const wordElement = this.wordElements[wordIndex];
             
             if (wordElement && wordElement.parentElement) {
-                wordElement.style.backgroundColor = this.settings.highlightColor || '#ff6b6b';
-                wordElement.style.color = 'white';
-                wordElement.style.fontWeight = 'bold';
+                wordElement.style.backgroundColor = 'transparent';
+                wordElement.style.color = this.settings.highlightColor || '#ff6b6b'; // Aktivna boja
+                wordElement.style.fontWeight = 'inherit';
                 this.highlightedWords.push(wordElement);
             }
         }
     }
 
     private scrollToCurrentWord() {
-        if (!this.container || this.currentIndex < 0 || this.currentIndex >= this.words.length) {
+        if (!this.displayElement || this.currentIndex < 0 || this.currentIndex >= this.words.length) {
             return;
         }
 
-        const targetLineIndex = this.lineWordMappings.findIndex(
-            mapping => this.currentIndex >= mapping.start && this.currentIndex <= mapping.end
+        this.highlightCurrentWords();
+        
+        const wordElement = this.wordElements[this.currentIndex];
+        if (!wordElement) {
+            return;
+        }
+
+        if (this.isRendering) {
+            setTimeout(() => this.scrollToCurrentWord(), 50);
+            return;
+        }
+
+        this.calculateVisibleRange();
+        const wordLine = this.lineWordMappings.find(m => 
+            this.currentIndex >= m.start && this.currentIndex <= m.end
         );
         
-        if (targetLineIndex !== -1) {
-            const targetLine = this.lineWordMappings[targetLineIndex];
-            const containerHeight = this.container.clientHeight;
-            const scrollTop = this.container.scrollTop;
-            
-            const isVisible = targetLine.top >= scrollTop && 
-                            (targetLine.top + targetLine.height) <= (scrollTop + containerHeight);
-            
-            if (!isVisible) {
-                const targetScrollTop = targetLine.top - containerHeight / 2;
-                
-                const oldStartIndex = this.visibleStartIndex;
-                const oldEndIndex = this.visibleEndIndex;
-                
-                this.element.scrollTop = Math.max(0, targetScrollTop);
-                this.calculateVisibleRange();
-                
-                if (this.visibleStartIndex !== oldStartIndex || this.visibleEndIndex !== oldEndIndex) {
-                    this.requestRender();
-                }
-            }
-            
-            setTimeout(() => {
-                this.highlightCurrentWords();
-            }, 50);
+        if (!wordLine) return;
+
+        const currentWordElement = this.wordElements[this.currentIndex];
+        const wordRect = currentWordElement.getBoundingClientRect();
+        const containerRect = this.displayElement.getBoundingClientRect();
+        
+        const wordMiddle = wordRect.top + (wordRect.height / 2) - containerRect.top;
+        const viewportMiddle = this.displayElement.clientHeight / 2;
+        const scrollOffset = wordMiddle - viewportMiddle;
+        
+        const targetScroll = this.displayElement.scrollTop + scrollOffset;
+        const clampedScroll = Math.max(0, Math.min(
+            this.totalHeight - this.displayElement.clientHeight, 
+            targetScroll
+        ));
+        
+        if (Math.abs(this.displayElement.scrollTop - clampedScroll) < 5) {
+            return;
         }
+
+        this.displayElement.scrollTo({
+            top: clampedScroll,
+            behavior: 'smooth'
+        });
     }
 }
