@@ -441,6 +441,7 @@ export class Commands {
     }
 
     play() {
+        console.log("[Commands] Play pressed");
         if (this.words.length === 0) {
             new Notice('No text to read');
             return;
@@ -524,6 +525,7 @@ export class Commands {
     }
 
     pause() {
+        console.log("[Commands] Pause pressed");
         this.setPlayButtonState(false);
         this.isPlaying = false;
 

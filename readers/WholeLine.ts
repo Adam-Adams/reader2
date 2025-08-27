@@ -7,7 +7,7 @@ interface BaseReader {
     applyStyles(): void;
 }
 
-export class LinearReader implements BaseReader {
+export class WholeLineReader implements BaseReader {
     public element: HTMLElement;
     public displayElement: HTMLDivElement;
     private container: HTMLElement;
@@ -695,13 +695,13 @@ export class LinearReader implements BaseReader {
     }
 
     public applyStyles() {
-        const displayMode = this.settings.linear?.displayMode || 'normal';
-        const wordsSettings = this.settings.linear?.words || { chunkSize: 3 };
+        const displayMode = this.settings.wholeLine?.displayMode || 'WholeLine';
+        const singleLetterSettings = this.settings.wholeLine?.singleLetter || { chunkSize: 3 };
 
-        if (displayMode === 'words') {
-            this.settings.chunkSize = wordsSettings.chunkSize;
+        if (displayMode === 'SingleLetter') {
+            this.settings.chunkSize = singleLetterSettings.chunkSize;
             if (this.onChunkSizeChange) {
-                this.onChunkSizeChange(wordsSettings.chunkSize);
+                this.onChunkSizeChange(singleLetterSettings.chunkSize);
             }
         }
 
@@ -725,20 +725,20 @@ export class LinearReader implements BaseReader {
         this.displayElement.style.background = 'var(--background-primary)';
         this.displayElement.style.whiteSpace = 'pre-wrap';
         
-        if (displayMode === 'words') {
-            const wordsSettings = this.settings.linear?.words || { width: 600, height: 300 };
-            this.displayElement.style.width = `${wordsSettings.width}px`;
-            this.displayElement.style.height = `${wordsSettings.height}px`;
+        if (displayMode === 'SingleLetter') {
+            const singleLetterSettings = this.settings.wholeLine?.singleLetter || { width: 600, height: 300 };
+            this.displayElement.style.width = `${singleLetterSettings.width}px`;
+            this.displayElement.style.height = `${singleLetterSettings.height}px`;
             this.displayElement.style.minWidth = '300px';
             this.displayElement.style.maxWidth = '800px';
             this.displayElement.style.minHeight = '60px';
         } else {
-            const normalSettings = this.settings.linear?.normal || { 
+            const wholeLineSettings = this.settings.wholeLine?.wholeLine || { 
                 width: 600, 
                 height: 300
             };
-            this.displayElement.style.width = `${normalSettings.width}px`;
-            this.displayElement.style.height = `${normalSettings.height}px`;
+            this.displayElement.style.width = `${wholeLineSettings.width}px`;
+            this.displayElement.style.height = `${wholeLineSettings.height}px`;
             this.displayElement.style.overflowY = 'auto';
             this.displayElement.style.overflowX = 'hidden';
         }
@@ -752,13 +752,13 @@ export class LinearReader implements BaseReader {
     public updateSettings(settings: SpeedReaderSettings): void {
         this.resetState();
         
-        const displayMode = settings.linear?.displayMode || 'words';
-        const wordsSettings = settings.linear?.words || { chunkSize: 1 };
+        const displayMode = settings.wholeLine?.displayMode || 'SingleLetter';
+        const singleLetterSettings = settings.wholeLine?.singleLetter || { chunkSize: 1 };
 
-        if (displayMode === 'words') {
-            settings.chunkSize = wordsSettings.chunkSize;
+        if (displayMode === 'SingleLetter') {
+            settings.chunkSize = singleLetterSettings.chunkSize;
             if (this.onChunkSizeChange) {
-                this.onChunkSizeChange(wordsSettings.chunkSize);
+                this.onChunkSizeChange(singleLetterSettings.chunkSize);
             }
         }
 
