@@ -3,6 +3,7 @@ import { SpeedReaderSettings } from './main';
 import { MiniPreview } from './readers/miniPreview';
 import { RSVP } from './readers/RSVP';
 import { LinearReader } from './readers/Linear';
+import { WholeLineReader } from './readers/WholeLine'; // Import WholeLineReader
 import { Commands } from './readers/commands';
 import { Progress } from './readers/progress';
 import { FileButtons } from './readers/fileButtons';
@@ -13,8 +14,9 @@ export class SpeedReaderModal extends Modal {
     private settings: SpeedReaderSettings;
     private text: string = '';
     private words: string[] = [];
+    private globalCurrentIndex: number = 0; // Nova globalna pozicija
     private miniPreview: MiniPreview | null = null;
-    private reader: RSVP | LinearReader | null = null;
+    private reader: RSVP | LinearReader | WholeLineReader | null = null;
     private commands: Commands | null = null;
     private progress: Progress | null = null;
     private fileButtons: FileButtons | null = null;
@@ -161,9 +163,13 @@ export class SpeedReaderModal extends Modal {
     setText(text: string) {
         this.text = text;
         this.words = this.preprocessText(text);
+        this.globalCurrentIndex = 0; // Resetuj globalnu poziciju
         
         if (this.commands) {
             this.commands.setContent(this.text, this.words);
+            if (this.globalCurrentIndex !== undefined) {
+                this.commands.setCurrentIndex(this.globalCurrentIndex);
+            }
         }
     }
 
@@ -190,9 +196,13 @@ export class SpeedReaderModal extends Modal {
                 // Set text first
                 this.text = text;
                 this.words = this.preprocessText(text);
+                this.globalCurrentIndex = 0; // Resetuj globalnu poziciju
                 
                 if (this.commands) {
                     this.commands.setContent(this.text, this.words);
+                    if (this.globalCurrentIndex !== undefined) {
+                        this.commands.setCurrentIndex(this.globalCurrentIndex);
+                    }
                 }
                 
                 // Finally update the info text
@@ -219,16 +229,45 @@ export class SpeedReaderModal extends Modal {
         this.settings = settings;
         
         // Ažuriraj sve komponente sa novim podešavanjima
-            if (this.reader) {
-                this.reader.updateSettings(settings);
-                this.reader.applyStyles();
-            }
+        if (this.reader) {
+            this.reader.updateSettings(settings);
+            this.reader.applyStyles();
+        }
         /* if (this.miniPreview) {
             this.miniPreview.updateSettings(settings);
         }
         if (this.commands) {
             this.commands.updateSettings(settings);
         } */
+    }
+
+    // Nova metoda za postavljanje globalne pozicije
+    public setGlobalCurrentIndex(globalIndex: number) {
+        this.globalCurrentIndex = Math.max(0, Math.min(globalIndex, this.words.length - 1));
+        
+        if (this.commands) {
+            this.commands.setCurrentIndex(this.globalCurrentIndex);
+        }
+        
+        // Ažuriraj progress bar
+        if (this.progress) {
+            this.progress.update(this.globalCurrentIndex, this.words.length);
+        }
+        
+        // Ažuriraj word selector modal ako je otvoren
+        if (this.wordSelectorModal) {
+            this.wordSelectorModal.updateCurrentIndex(this.globalCurrentIndex);
+        }
+        
+        // Forsiraj ažuriranje u Linear reader-u
+        if (this.reader) {
+            this.reader.update(this.text, this.words, this.globalCurrentIndex);
+        }
+    }
+
+    // Nova metoda za dobijanje globalne pozicije
+    public getGlobalCurrentIndex(): number {
+        return this.globalCurrentIndex;
     }
 
     onOpen() {
@@ -308,6 +347,8 @@ export class SpeedReaderModal extends Modal {
         
         if (readerType === 'linear') {
             this.reader = new LinearReader(readerContainer, this.settings, () => {});
+        } else if (readerType === 'wholeLine') {
+            this.reader = new WholeLineReader(readerContainer, this.settings, () => {}); // Added WholeLine option
         } else {
             this.reader = new RSVP(readerContainer, this.settings, () => {});
         }
@@ -334,6 +375,7 @@ export class SpeedReaderModal extends Modal {
 
             () => {
                 // Callback nakon što je resetovan
+                this.globalCurrentIndex = 0;
             },
             () => {
                 if (this.commands) {
@@ -346,9 +388,12 @@ export class SpeedReaderModal extends Modal {
             },
             {
                 onUpdate: (text: string, words: string[], currentIndex: number) => {
-            if (this.reader) {
-                this.reader.update(text, words, currentIndex);
-            }
+                    // Ažuriraj globalnu poziciju
+                    this.globalCurrentIndex = currentIndex;
+                    
+                    if (this.reader) {
+                        this.reader.update(text, words, currentIndex);
+                    }
                     if (this.miniPreview) {
                         this.miniPreview.update(text, words, currentIndex);
                     }
@@ -406,6 +451,9 @@ export class SpeedReaderModal extends Modal {
             // Update displays
             if (this.commands) {
                 this.commands.setContent(this.text, this.words);
+                if (this.globalCurrentIndex !== undefined) {
+                    this.commands.setCurrentIndex(this.globalCurrentIndex);
+                }
             }
         }
     }
@@ -425,7 +473,7 @@ export class SpeedReaderModal extends Modal {
             return;
         }
 
-        const currentIndex = this.commands ? this.commands.getCurrentIndex() : 0;
+        const currentIndex = this.globalCurrentIndex;
         
         this.wordSelectorModal = new WordSelectorModal(
             this.app,
@@ -433,9 +481,7 @@ export class SpeedReaderModal extends Modal {
             this.words,
             currentIndex,
             (selectedIndex: number) => {
-                if (this.commands) {
-                    this.commands.setCurrentIndex(selectedIndex);
-                }
+                this.setGlobalCurrentIndex(selectedIndex);
             },
             this.plugin,
             this.settings

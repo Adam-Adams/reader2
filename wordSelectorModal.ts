@@ -24,6 +24,7 @@ export class WordSelectorModal extends Modal {
     private wordElements: HTMLElement[] = [];
     private highlightedWords: HTMLElement[] = [];
     private totalHeight = 0;
+    private globalCurrentIndex: number;
     
     // Virtualization
     private virtualContainer?: HTMLElement;
@@ -65,6 +66,7 @@ export class WordSelectorModal extends Modal {
         this.text = text;
         this.words = words;
         this.currentIndex = currentIndex;
+        this.globalCurrentIndex = currentIndex;
         this.onWordSelected = onWordSelected;
         this.plugin = plugin;
         this.settings = settings;
@@ -273,6 +275,7 @@ export class WordSelectorModal extends Modal {
                     
                     wordSpan.addEventListener('click', (e) => {
                         e.preventDefault();
+                        this.globalCurrentIndex = wordIndex;
                         this.onWordSelected(wordIndex);
                         this.close();
                     });
@@ -284,6 +287,10 @@ export class WordSelectorModal extends Modal {
         });
         
         return lineDiv;
+    }
+
+    public getGlobalCurrentIndex(): number {
+        return this.globalCurrentIndex;
     }
 
     private calculateLineHeight(text: string, containerWidth: number, settings: SpeedReaderSettings): number {
@@ -353,8 +360,8 @@ export class WordSelectorModal extends Modal {
         this.highlightedWords = [];
 
         const chunkSize = this.settings.chunkSize || 1;
-        for (let i = 0; i < chunkSize && (this.currentIndex + i) < this.words.length; i++) {
-            const wordIndex = this.currentIndex + i;
+        for (let i = 0; i < chunkSize && (this.globalCurrentIndex + i) < this.words.length; i++) {
+            const wordIndex = this.globalCurrentIndex + i;
             const wordElement = this.wordElements[wordIndex];
             
             if (wordElement && wordElement.parentElement) {
@@ -367,12 +374,12 @@ export class WordSelectorModal extends Modal {
     }
 
     private scrollToCurrentWord() {
-        if (!this.textContainer || this.currentIndex < 0 || this.currentIndex >= this.words.length) {
+        if (!this.textContainer || this.globalCurrentIndex < 0 || this.globalCurrentIndex >= this.words.length) {
             return;
         }
 
         const targetLineIndex = this.lineWordMappings.findIndex(
-            mapping => this.currentIndex >= mapping.start && this.currentIndex <= mapping.end
+            mapping => this.globalCurrentIndex >= mapping.start && this.globalCurrentIndex <= mapping.end
         );
         
         if (targetLineIndex !== -1) {
@@ -405,6 +412,7 @@ export class WordSelectorModal extends Modal {
 
     public updateCurrentIndex(newIndex: number) {
         this.currentIndex = newIndex;
+        this.globalCurrentIndex = newIndex;
         this.scrollToCurrentWord();
     }
 

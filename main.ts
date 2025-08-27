@@ -15,8 +15,8 @@ export interface SpeedReaderSettings {
     fontFamily: string;
     fontSize: number;
     letterSpacing: number;
-    readerType: 'rsvp' | 'linear';
-    // Nova RSVP podešavanja
+    readerType: 'rsvp' | 'linear' | 'wholeLine'; // Added wholeLine option
+    // RSVP settings
     rsvp?: {
         displayMode: 'single-line' | 'multi-line' | 'ellipse';
         singleLine?: {
@@ -24,19 +24,39 @@ export interface SpeedReaderSettings {
         };
         multiLine?: {
             rows: number;
-            width: number; // širina pravougaonika u pikselima
+            width: number;
         };
         ellipse?: {
             width: number;
             height: number;
         };
     };
-    // Nova Linear podešavanja
+    // Linear reader settings
     linear?: {
-        displayMode?: 'normal' | 'words' | 'left-right' | 'row';
-        width?: number;
-        height?: number;
-        wordsCount?: number;
+        displayMode: 'normal' | 'words';
+        words?: {
+            chunkSize: number;
+            width?: number;
+            height?: number;
+        };
+        normal?: {
+            width?: number;
+            height?: number;
+            manualScroll?: boolean;
+        };
+    };
+    // WholeLine reader settings
+    wholeLine?: {
+        displayMode: 'WholeLine' | 'SingleLetter';
+        singleLetter?: {
+            chunkSize: number;
+            width?: number;
+            height?: number;
+        };
+        wholeLine?: {
+            width?: number;
+            height?: number;
+        };
     };
     windowState: {
         left: string;
@@ -68,7 +88,7 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
     fontSize: 24,
     letterSpacing: 0,
     readerType: 'rsvp',
-    // Nova RSVP podešavanja
+    // RSVP settings
     rsvp: {
         displayMode: 'ellipse',
         singleLine: {
@@ -81,6 +101,32 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
         ellipse: {
             width: 300,
             height: 200
+        }
+    },
+    // Linear reader settings
+    linear: {
+        displayMode: 'normal',
+        words: {
+            chunkSize: 1,
+            width: 600,
+            height: 300
+        },
+        normal: {
+            width: 600,
+            height: 300
+        }
+    },
+    // WholeLine reader settings
+    wholeLine: {
+        displayMode: 'WholeLine',
+        singleLetter: {
+            chunkSize: 3,
+            width: 600,
+            height: 300
+        },
+        wholeLine: {
+            width: 600,
+            height: 300
         }
     },
     windowState: {

@@ -187,28 +187,32 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
         // Reader Display Settings section
         containerEl.createEl('h3', { text: 'Reader Display Settings' });
 
-            new Setting(containerEl)
-                .setName('Reader type')
-                .setDesc('Choose reading mode')
-                .addDropdown(dropdown =>
-                    dropdown
-                        .addOption('rsvp', 'RSVP')
-                        .addOption('linear', 'Linear')
-                        .setValue(this.plugin.settings.readerType || 'rsvp')
-                        .onChange(async (value) => {
-                            this.plugin.settings.readerType = value as 'rsvp' | 'linear';
-                            // Reset display mode when changing reader type
-                            if (value === 'linear') {
-                                this.plugin.settings.rsvp = undefined;
-                            } else {
-                                if (!this.plugin.settings.rsvp) {
-                                    this.plugin.settings.rsvp = { displayMode: 'ellipse' };
-                                }
+        new Setting(containerEl)
+            .setName('Reader type')
+            .setDesc('Choose reading mode')
+            .addDropdown(dropdown =>
+                dropdown
+                    .addOption('rsvp', 'RSVP')
+                    .addOption('linear', 'Linear')
+                    .addOption('wholeLine', 'WholeLine')
+                    .setValue(this.plugin.settings.readerType || 'rsvp')
+                    .onChange(async (value) => {
+                        this.plugin.settings.readerType = value as 'rsvp' | 'linear' | 'wholeLine';
+                        // Reset display mode when changing reader type
+                        if (value === 'linear') {
+                            this.plugin.settings.rsvp = undefined;
+                        } else if (value === 'wholeLine') {
+                            this.plugin.settings.rsvp = undefined;
+                            this.plugin.settings.linear = undefined;
+                        } else {
+                            if (!this.plugin.settings.rsvp) {
+                                this.plugin.settings.rsvp = { displayMode: 'ellipse' };
                             }
-                            await this.updateModalSettings();
-                            this.display(); // Refresh settings UI
-                        })
-                );
+                        }
+                        await this.updateModalSettings();
+                        this.display(); // Refresh settings UI
+                    })
+            );
 
         // Reader Display Settings (shown based on reader type)
         if (this.plugin.settings.readerType === 'rsvp') {
@@ -246,79 +250,224 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                     dropdown
                         .addOption('normal', 'Normal')
                         .addOption('words', 'Words')
-                        .addOption('left-right', 'Left Right')
-                        .addOption('row', 'Row')
-                    .setValue(this.plugin.settings.linear?.displayMode || 'normal')
-                    .onChange(async (value) => {
-                        if (!this.plugin.settings.linear) {
-                            this.plugin.settings.linear = {};
-                        }
-                        this.plugin.settings.linear.displayMode = value as 'normal' | 'words' | 'left-right' | 'row';
-                        // Update chunk size when switching to words mode
-                        if (value === 'words') {
-                            this.plugin.settings.chunkSize = this.plugin.settings.linear?.wordsCount || 1;
-                        }
-                        await this.updateModalSettings();
-                        this.display(); // Refresh to show/hide relevant options
-                    }),
-            );
-
-            // Common linear settings
-            new Setting(containerEl)
-                .setName('Rectangle width')
-                .setDesc('Width of the rectangle in pixels')
-                .addText(text =>
-                    text
-                        .setPlaceholder('400')
-                        .setValue((this.plugin.settings.linear?.width || 400).toString())
+                        .setValue(this.plugin.settings.linear?.displayMode || 'words')
                         .onChange(async (value) => {
-                            const num = parseInt(value);
-                            if (!isNaN(num) && num >= 200 && num <= 800) {
-                                if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
-                                this.plugin.settings.linear.width = num;
-                                await this.updateModalSettings();
+                            if (!this.plugin.settings.linear) {
+                                this.plugin.settings.linear = {};
                             }
+                            this.plugin.settings.linear.displayMode = value as 'normal' | 'words';
+                            await this.updateModalSettings();
+                            this.display(); // Refresh to show/hide relevant options
                         }),
                 );
 
-            new Setting(containerEl)
-                .setName('Rectangle height')
-                .setDesc('Height of the rectangle in pixels')
-                .addText(text =>
-                    text
-                        .setPlaceholder('200')
-                        .setValue((this.plugin.settings.linear?.height || 200).toString())
-                        .onChange(async (value) => {
-                            const num = parseInt(value);
-                            if (!isNaN(num) && num >= 100 && num <= 400) {
-                                if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
-                                this.plugin.settings.linear.height = num;
-                                await this.updateModalSettings();
-                            }
-                        }),
-                );
-
-            // Words mode specific setting
+            // Words mode settings
             if (this.plugin.settings.linear?.displayMode === 'words') {
                 new Setting(containerEl)
-                    .setName('Words')
+                    .setName('Words chunk size')
                     .setDesc('Number of words to display at once')
                     .addText(text =>
                         text
                             .setPlaceholder('1')
-                            .setValue((this.plugin.settings.linear?.wordsCount || 1).toString())
+                            .setValue((this.plugin.settings.linear?.words?.chunkSize || 1).toString())
                             .onChange(async (value) => {
                                 const num = parseInt(value);
                                 if (!isNaN(num) && num >= 1 && num <= 10) {
                                     if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
-                                    this.plugin.settings.linear.wordsCount = num;
-                                    
-                                    // Only update chunk size if in linear words mode
-                                    if (this.plugin.settings.readerType === 'linear' && 
-                                        this.plugin.settings.linear.displayMode === 'words') {
-                                        this.plugin.settings.chunkSize = num;
-                                    }
-                                    
+                                    if (!this.plugin.settings.linear.words) this.plugin.settings.linear.words = {};
+                                    this.plugin.settings.linear.words.chunkSize = num;
+                                    this.plugin.settings.chunkSize = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('Words width')
+                    .setDesc('Width of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('600')
+                            .setValue((this.plugin.settings.linear?.words?.width || 600).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 200 && num <= 800) {
+                                    if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
+                                    if (!this.plugin.settings.linear.words) this.plugin.settings.linear.words = {};
+                                    this.plugin.settings.linear.words.width = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('Words height')
+                    .setDesc('Height of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('300')
+                            .setValue((this.plugin.settings.linear?.words?.height || 300).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 100 && num <= 400) {
+                                    if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
+                                    if (!this.plugin.settings.linear.words) this.plugin.settings.linear.words = {};
+                                    this.plugin.settings.linear.words.height = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+            }
+
+            // Normal mode settings
+            if (this.plugin.settings.linear?.displayMode === 'normal') {
+                new Setting(containerEl)
+                    .setName('Normal width')
+                    .setDesc('Width of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('600')
+                            .setValue((this.plugin.settings.linear?.normal?.width || 600).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 200 && num <= 800) {
+                                    if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
+                                    if (!this.plugin.settings.linear.normal) this.plugin.settings.linear.normal = {};
+                                    this.plugin.settings.linear.normal.width = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('Normal height')
+                    .setDesc('Height of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('300')
+                            .setValue((this.plugin.settings.linear?.normal?.height || 300).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 100 && num <= 400) {
+                                    if (!this.plugin.settings.linear) this.plugin.settings.linear = {};
+                                    if (!this.plugin.settings.linear.normal) this.plugin.settings.linear.normal = {};
+                                    this.plugin.settings.linear.normal.height = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+            }
+        } else if (this.plugin.settings.readerType === 'wholeLine') {
+            // WholeLine display mode settings
+            new Setting(containerEl)
+                .setName('WholeLine display mode')
+                .setDesc('Choose how text is displayed in WholeLine mode')
+                .addDropdown(dropdown =>
+                    dropdown
+                        .addOption('WholeLine', 'Whole Line')
+                        .addOption('SingleLetter', 'Single Letter')
+                        .setValue(this.plugin.settings.wholeLine?.displayMode || 'WholeLine')
+                        .onChange(async (value) => {
+                            if (!this.plugin.settings.wholeLine) {
+                                this.plugin.settings.wholeLine = {};
+                            }
+                            this.plugin.settings.wholeLine.displayMode = value as 'WholeLine' | 'SingleLetter';
+                            await this.updateModalSettings();
+                            this.display(); // Refresh to show/hide relevant options
+                        }),
+                );
+
+            // SingleLetter mode settings
+            if (this.plugin.settings.wholeLine?.displayMode === 'SingleLetter') {
+                /* new Setting(containerEl)
+                    .setName('SingleLetter chunk size')
+                    .setDesc('Number of words to display at once')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('3')
+                            .setValue((this.plugin.settings.wholeLine?.singleLetter?.chunkSize || 3).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 1 && num <= 10) {
+                                    if (!this.plugin.settings.wholeLine) this.plugin.settings.wholeLine = {};
+                                    if (!this.plugin.settings.wholeLine.singleLetter) this.plugin.settings.wholeLine.singleLetter = {};
+                                    this.plugin.settings.wholeLine.singleLetter.chunkSize = num;
+                                    this.plugin.settings.chunkSize = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    ); */
+
+                new Setting(containerEl)
+                    .setName('SingleLetter width')
+                    .setDesc('Width of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('600')
+                            .setValue((this.plugin.settings.wholeLine?.singleLetter?.width || 600).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 200 && num <= 800) {
+                                    if (!this.plugin.settings.wholeLine) this.plugin.settings.wholeLine = {};
+                                    if (!this.plugin.settings.wholeLine.singleLetter) this.plugin.settings.wholeLine.singleLetter = {};
+                                    this.plugin.settings.wholeLine.singleLetter.width = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('SingleLetter height')
+                    .setDesc('Height of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('300')
+                            .setValue((this.plugin.settings.wholeLine?.singleLetter?.height || 300).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 100 && num <= 400) {
+                                    if (!this.plugin.settings.wholeLine) this.plugin.settings.wholeLine = {};
+                                    if (!this.plugin.settings.wholeLine.singleLetter) this.plugin.settings.wholeLine.singleLetter = {};
+                                    this.plugin.settings.wholeLine.singleLetter.height = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+            }
+
+            // WholeLine mode settings
+            if (this.plugin.settings.wholeLine?.displayMode === 'WholeLine') {
+                new Setting(containerEl)
+                    .setName('WholeLine width')
+                    .setDesc('Width of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('600')
+                            .setValue((this.plugin.settings.wholeLine?.wholeLine?.width || 600).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 200 && num <= 800) {
+                                    if (!this.plugin.settings.wholeLine) this.plugin.settings.wholeLine = {};
+                                    if (!this.plugin.settings.wholeLine.wholeLine) this.plugin.settings.wholeLine.wholeLine = {};
+                                    this.plugin.settings.wholeLine.wholeLine.width = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('WholeLine height')
+                    .setDesc('Height of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('300')
+                            .setValue((this.plugin.settings.wholeLine?.wholeLine?.height || 300).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 100 && num <= 400) {
+                                    if (!this.plugin.settings.wholeLine) this.plugin.settings.wholeLine = {};
+                                    if (!this.plugin.settings.wholeLine.wholeLine) this.plugin.settings.wholeLine.wholeLine = {};
+                                    this.plugin.settings.wholeLine.wholeLine.height = num;
                                     await this.updateModalSettings();
                                 }
                             }),

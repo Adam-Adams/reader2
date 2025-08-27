@@ -1,12 +1,12 @@
 {
-  "wordsPerMinute": 500,
+  "wordsPerMinute": 250,
   "highlightColor": "#6bffba",
   "chunkSize": 3,
   "autoAdvance": true,
   "fontFamily": "Arial",
-  "fontSize": 26,
+  "fontSize": 18,
   "letterSpacing": 0,
-  "readerType": "linear",
+  "readerType": "wholeLine",
   "rsvp": {
     "displayMode": "ellipse",
     "singleLine": {
@@ -21,16 +21,47 @@
       "height": 200
     }
   },
+  "linear": {
+    "displayMode": "words",
+    "wordsCount": 3,
+    "width": 600,
+    "height": 150,
+    "words": {
+      "chunkSize": 3,
+      "height": 300,
+      "width": 700
+    },
+    "lines": {
+      "width": 400
+    },
+    "normal": {
+      "height": 350,
+      "width": 700,
+      "manualScroll": true
+    }
+  },
+  "wholeLine": {
+    "displayMode": "WholeLine",
+    "singleLetter": {
+      "chunkSize": 3,
+      "height": 400,
+      "width": 300
+    },
+    "wholeLine": {
+      "height": 400,
+      "width": 300
+    }
+  },
   "windowState": {
-    "left": "55px",
-    "top": "56px",
-    "width": "977px",
-    "height": "716px"
+    "left": "25px",
+    "top": "21px",
+    "width": "954px",
+    "height": "692px"
   },
   "textInputModalSettings": {
     "windowState": {
-      "left": "0px",
-      "top": "0px",
+      "left": "20px",
+      "top": "20px",
       "width": "979px",
       "height": "709px"
     }
@@ -40,7 +71,7 @@
       "left": "337px",
       "top": "20px",
       "width": "727px",
-      "height": "775px"
+      "height": "767px"
     }
   },
   "wordSelectorModalSettings": {
@@ -52,19 +83,13 @@
     }
   },
   "wordSelectorWindowState": {
-    "left": "132px",
+    "left": "20px",
     "top": "20px",
-    "width": "1144px",
+    "width": "848px",
     "height": "748px"
   },
   "fontSettingsPosition": {
     "left": "834px",
     "top": "249.863px"
-  },
-  "linear": {
-    "displayMode": "words",
-    "wordsCount": 3,
-    "height": 300,
-    "width": 700
   }
 }
