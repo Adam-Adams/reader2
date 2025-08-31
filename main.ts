@@ -10,12 +10,15 @@ import { replaceFontPaths } from './fontList';  // Dodajemo import
 export interface SpeedReaderSettings {
     wordsPerMinute: number;
     highlightColor: string;
+    activeTextColor?: string;
+    inactiveTextColor?: string;
     chunkSize: number;
     autoAdvance: boolean;
     fontFamily: string;
     fontSize: number;
     letterSpacing: number;
-    readerType: 'rsvp' | 'linear' | 'wholeLine'; // Added wholeLine option
+    readerType: 'rsvp' | 'linear' | 'wholeLine' | 'splitLine' | 'threeSplitLine'; // Added threeSplitLine option
+
     // RSVP settings
     rsvp?: {
         displayMode: 'single-line' | 'multi-line' | 'ellipse';
@@ -54,6 +57,32 @@ export interface SpeedReaderSettings {
             height?: number;
         };
         wholeLine?: {
+            width?: number;
+            height?: number;
+        };
+    };
+    // SplitLine reader settings
+    splitLine?: {
+        displayMode: 'SplitLine' | 'SplitLetter';
+        splitLetter?: {
+            chunkSize: number;
+            width?: number;
+            height?: number;
+        };
+        splitLine?: {
+            width?: number;
+            height?: number;
+        };
+    };
+        // ThreeSplitLine reader settings
+    threeSplitLine?: {
+        displayMode: 'ThreeSplitLine' | 'ThreeSplitLetter';
+        threeSplitLetter?: {
+            chunkSize: number;
+            width?: number;
+            height?: number;
+        };
+        threeSplitLine?: {
             width?: number;
             height?: number;
         };
@@ -125,6 +154,32 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
             height: 300
         },
         wholeLine: {
+            width: 600,
+            height: 300
+        }
+    },
+    // SplitLine reader settings
+    splitLine: {
+        displayMode: 'SplitLine',
+        splitLetter: {
+            chunkSize: 3,
+            width: 600,
+            height: 300
+        },
+        splitLine: {
+            width: 600,
+            height: 300
+        }
+    },
+        // ThreeSplitLine reader settings
+    threeSplitLine: {
+        displayMode: 'ThreeSplitLine',
+        threeSplitLetter: {
+            chunkSize: 3,
+            width: 600,
+            height: 300
+        },
+        threeSplitLine: {
             width: 600,
             height: 300
         }

@@ -4,6 +4,8 @@ import { MiniPreview } from './readers/miniPreview';
 import { RSVP } from './readers/RSVP';
 import { LinearReader } from './readers/Linear';
 import { WholeLineReader } from './readers/WholeLine'; // Import WholeLineReader
+import { SplitLineReader } from './readers/SplitLine'; // Import SplitLineReader
+import { ThreeSplitLineReader } from './readers/ThreeSplitLine'; // Import ThreeSplitLineReader
 import { Commands } from './readers/commands';
 import { Progress } from './readers/progress';
 import { FileButtons } from './readers/fileButtons';
@@ -16,7 +18,7 @@ export class SpeedReaderModal extends Modal {
     private words: string[] = [];
     private globalCurrentIndex: number = 0; // Nova globalna pozicija
     private miniPreview: MiniPreview | null = null;
-    private reader: RSVP | LinearReader | WholeLineReader | null = null;
+    private reader: RSVP | LinearReader | WholeLineReader | SplitLineReader | ThreeSplitLineReader | null = null;
     private commands: Commands | null = null;
     private progress: Progress | null = null;
     private fileButtons: FileButtons | null = null;
@@ -348,7 +350,11 @@ export class SpeedReaderModal extends Modal {
         if (readerType === 'linear') {
             this.reader = new LinearReader(readerContainer, this.settings, () => {});
         } else if (readerType === 'wholeLine') {
-            this.reader = new WholeLineReader(readerContainer, this.settings, () => {}); // Added WholeLine option
+            this.reader = new WholeLineReader(readerContainer, this.settings, () => {});
+        } else if (readerType === 'splitLine') {
+            this.reader = new SplitLineReader(readerContainer, this.settings, () => {});
+        } else if (readerType === 'threeSplitLine') {
+            this.reader = new ThreeSplitLineReader(readerContainer, this.settings, () => {}); // Added ThreeSplitLine option
         } else {
             this.reader = new RSVP(readerContainer, this.settings, () => {});
         }

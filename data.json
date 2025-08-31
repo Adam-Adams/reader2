@@ -1,14 +1,14 @@
 {
-  "wordsPerMinute": 250,
-  "highlightColor": "#6bffba",
-  "chunkSize": 3,
+  "wordsPerMinute": 500,
+  "highlightColor": "#6bffee",
+  "chunkSize": 18,
   "autoAdvance": true,
   "fontFamily": "Arial",
   "fontSize": 18,
   "letterSpacing": 0,
-  "readerType": "wholeLine",
+  "readerType": "rsvp",
   "rsvp": {
-    "displayMode": "ellipse",
+    "displayMode": "multi-line",
     "singleLine": {
       "wordsPerLine": 8
     },
@@ -22,41 +22,58 @@
     }
   },
   "linear": {
-    "displayMode": "words",
-    "wordsCount": 3,
-    "width": 600,
-    "height": 150,
+    "displayMode": "normal",
     "words": {
-      "chunkSize": 3,
-      "height": 300,
-      "width": 700
-    },
-    "lines": {
-      "width": 400
+      "chunkSize": 1,
+      "width": 600,
+      "height": 300
     },
     "normal": {
-      "height": 350,
-      "width": 700,
-      "manualScroll": true
+      "width": 600,
+      "height": 300
     }
   },
   "wholeLine": {
     "displayMode": "WholeLine",
     "singleLetter": {
       "chunkSize": 3,
-      "height": 400,
-      "width": 300
+      "width": 600,
+      "height": 300
     },
     "wholeLine": {
-      "height": 400,
-      "width": 300
+      "width": 600,
+      "height": 300
+    }
+  },
+  "splitLine": {
+    "displayMode": "SplitLine",
+    "splitLetter": {
+      "chunkSize": 3,
+      "width": 600,
+      "height": 300
+    },
+    "splitLine": {
+      "width": 600,
+      "height": 300
+    }
+  },
+  "threeSplitLine": {
+    "displayMode": "ThreeSplitLetter",
+    "threeSplitLetter": {
+      "chunkSize": 3,
+      "width": 700,
+      "height": 400
+    },
+    "threeSplitLine": {
+      "width": 700,
+      "height": 400
     }
   },
   "windowState": {
     "left": "25px",
     "top": "21px",
-    "width": "954px",
-    "height": "692px"
+    "width": "989px",
+    "height": "703px"
   },
   "textInputModalSettings": {
     "windowState": {
@@ -91,5 +108,7 @@
   "fontSettingsPosition": {
     "left": "834px",
     "top": "249.863px"
-  }
+  },
+  "activeTextColor": "#e0e0e0",
+  "inactiveTextColor": "#808080"
 }

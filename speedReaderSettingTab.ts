@@ -131,7 +131,7 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Highlight color')
-            .setDesc('Color for highlighting the current word')
+            .setDesc('Color for highlighting the current word or letter')
             .addColorPicker(color =>
                 color.setValue(this.plugin.settings.highlightColor || '#ff6b6b').onChange(async (value) => {
                     this.plugin.settings.highlightColor = value;
@@ -146,6 +146,51 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                         const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
                         if (hexRegex.test(value) || value === '') {
                             this.plugin.settings.highlightColor = value || '#ff6b6b';
+                            await this.updateModalSettings();
+                        }
+                    }),
+            );
+        // Add Active text color setting
+        new Setting(containerEl)
+            .setName('Active text color')
+            .setDesc('Color for the currently focused word')
+            .addColorPicker(color =>
+                color.setValue(this.plugin.settings.activeTextColor || '').onChange(async (value) => {
+                    this.plugin.settings.activeTextColor = value;
+                    await this.updateModalSettings();
+                }),
+            )
+            .addText(text =>
+                text
+                    .setPlaceholder('Use theme default')
+                    .setValue(this.plugin.settings.activeTextColor || '')
+                    .onChange(async (value) => {
+                        const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+                        if (hexRegex.test(value) || value === '') {
+                            this.plugin.settings.activeTextColor = value;
+                            await this.updateModalSettings();
+                        }
+                    }),
+            );
+
+        // Add Inactive text color setting
+        new Setting(containerEl)
+            .setName('Inactive text color')
+            .setDesc('Color for non-focused words')
+            .addColorPicker(color =>
+                color.setValue(this.plugin.settings.inactiveTextColor || '').onChange(async (value) => {
+                    this.plugin.settings.inactiveTextColor = value;
+                    await this.updateModalSettings();
+                }),
+            )
+            .addText(text =>
+                text
+                    .setPlaceholder('Use theme default')
+                    .setValue(this.plugin.settings.inactiveTextColor || '')
+                    .onChange(async (value) => {
+                        const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+                        if (hexRegex.test(value) || value === '') {
+                            this.plugin.settings.inactiveTextColor = value;
                             await this.updateModalSettings();
                         }
                     }),
@@ -195,15 +240,26 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                     .addOption('rsvp', 'RSVP')
                     .addOption('linear', 'Linear')
                     .addOption('wholeLine', 'WholeLine')
+                    .addOption('splitLine', 'SplitLine')
+                    .addOption('threeSplitLine', 'ThreeSplitLine') // Added ThreeSplitLine option
                     .setValue(this.plugin.settings.readerType || 'rsvp')
                     .onChange(async (value) => {
-                        this.plugin.settings.readerType = value as 'rsvp' | 'linear' | 'wholeLine';
+                        this.plugin.settings.readerType = value as 'rsvp' | 'linear' | 'wholeLine' | 'splitLine' | 'threeSplitLine';
                         // Reset display mode when changing reader type
                         if (value === 'linear') {
                             this.plugin.settings.rsvp = undefined;
                         } else if (value === 'wholeLine') {
                             this.plugin.settings.rsvp = undefined;
                             this.plugin.settings.linear = undefined;
+                        } else if (value === 'splitLine') {
+                            this.plugin.settings.rsvp = undefined;
+                            this.plugin.settings.linear = undefined;
+                            this.plugin.settings.wholeLine = undefined;
+                        } else if (value === 'threeSplitLine') {
+                            this.plugin.settings.rsvp = undefined;
+                            this.plugin.settings.linear = undefined;
+                            this.plugin.settings.wholeLine = undefined;
+                            this.plugin.settings.splitLine = undefined;
                         } else {
                             if (!this.plugin.settings.rsvp) {
                                 this.plugin.settings.rsvp = { displayMode: 'ellipse' };
@@ -379,25 +435,6 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
 
             // SingleLetter mode settings
             if (this.plugin.settings.wholeLine?.displayMode === 'SingleLetter') {
-                /* new Setting(containerEl)
-                    .setName('SingleLetter chunk size')
-                    .setDesc('Number of words to display at once')
-                    .addText(text =>
-                        text
-                            .setPlaceholder('3')
-                            .setValue((this.plugin.settings.wholeLine?.singleLetter?.chunkSize || 3).toString())
-                            .onChange(async (value) => {
-                                const num = parseInt(value);
-                                if (!isNaN(num) && num >= 1 && num <= 10) {
-                                    if (!this.plugin.settings.wholeLine) this.plugin.settings.wholeLine = {};
-                                    if (!this.plugin.settings.wholeLine.singleLetter) this.plugin.settings.wholeLine.singleLetter = {};
-                                    this.plugin.settings.wholeLine.singleLetter.chunkSize = num;
-                                    this.plugin.settings.chunkSize = num;
-                                    await this.updateModalSettings();
-                                }
-                            }),
-                    ); */
-
                 new Setting(containerEl)
                     .setName('SingleLetter width')
                     .setDesc('Width of the display area in pixels')
@@ -468,6 +505,200 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                                     if (!this.plugin.settings.wholeLine) this.plugin.settings.wholeLine = {};
                                     if (!this.plugin.settings.wholeLine.wholeLine) this.plugin.settings.wholeLine.wholeLine = {};
                                     this.plugin.settings.wholeLine.wholeLine.height = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+            }
+        } else if (this.plugin.settings.readerType === 'splitLine') {
+            // SplitLine display mode settings
+            new Setting(containerEl)
+                .setName('SplitLine display mode')
+                .setDesc('Choose how text is displayed in SplitLine mode')
+                .addDropdown(dropdown =>
+                    dropdown
+                        .addOption('SplitLine', 'Split Line')
+                        .addOption('SplitLetter', 'Split Letter')
+                        .setValue(this.plugin.settings.splitLine?.displayMode || 'SplitLine')
+                        .onChange(async (value) => {
+                            if (!this.plugin.settings.splitLine) {
+                                this.plugin.settings.splitLine = {};
+                            }
+                            this.plugin.settings.splitLine.displayMode = value as 'SplitLine' | 'SplitLetter';
+                            await this.updateModalSettings();
+                            this.display(); // Refresh to show/hide relevant options
+                        }),
+                );
+
+            // SplitLetter mode settings
+            if (this.plugin.settings.splitLine?.displayMode === 'SplitLetter') {
+                new Setting(containerEl)
+                    .setName('SplitLetter width')
+                    .setDesc('Width of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('600')
+                            .setValue((this.plugin.settings.splitLine?.splitLetter?.width || 600).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 200 && num <= 800) {
+                                    if (!this.plugin.settings.splitLine) this.plugin.settings.splitLine = {};
+                                    if (!this.plugin.settings.splitLine.splitLetter) this.plugin.settings.splitLine.splitLetter = {};
+                                    this.plugin.settings.splitLine.splitLetter.width = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('SplitLetter height')
+                    .setDesc('Height of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('300')
+                            .setValue((this.plugin.settings.splitLine?.splitLetter?.height || 300).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 100 && num <= 400) {
+                                    if (!this.plugin.settings.splitLine) this.plugin.settings.splitLine = {};
+                                    if (!this.plugin.settings.splitLine.splitLetter) this.plugin.settings.splitLine.splitLetter = {};
+                                    this.plugin.settings.splitLine.splitLetter.height = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+            }
+
+            // SplitLine mode settings
+            if (this.plugin.settings.splitLine?.displayMode === 'SplitLine') {
+                new Setting(containerEl)
+                    .setName('SplitLine width')
+                    .setDesc('Width of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('600')
+                            .setValue((this.plugin.settings.splitLine?.splitLine?.width || 600).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 200 && num <= 800) {
+                                    if (!this.plugin.settings.splitLine) this.plugin.settings.splitLine = {};
+                                    if (!this.plugin.settings.splitLine.splitLine) this.plugin.settings.splitLine.splitLine = {};
+                                    this.plugin.settings.splitLine.splitLine.width = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('SplitLine height')
+                    .setDesc('Height of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('300')
+                            .setValue((this.plugin.settings.splitLine?.splitLine?.height || 300).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 100 && num <= 400) {
+                                    if (!this.plugin.settings.splitLine) this.plugin.settings.splitLine = {};
+                                    if (!this.plugin.settings.splitLine.splitLine) this.plugin.settings.splitLine.splitLine = {};
+                                    this.plugin.settings.splitLine.splitLine.height = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+            }
+        } else if (this.plugin.settings.readerType === 'threeSplitLine') {
+            // ThreeSplitLine display mode settings
+            new Setting(containerEl)
+                .setName('ThreeSplitLine display mode')
+                .setDesc('Choose how text is displayed in ThreeSplitLine mode')
+                .addDropdown(dropdown =>
+                    dropdown
+                        .addOption('ThreeSplitLine', 'Three Split Line')
+                        .addOption('ThreeSplitLetter', 'Three Split Letter')
+                        .setValue(this.plugin.settings.threeSplitLine?.displayMode || 'ThreeSplitLine')
+                        .onChange(async (value) => {
+                            if (!this.plugin.settings.threeSplitLine) {
+                                this.plugin.settings.threeSplitLine = {};
+                            }
+                            this.plugin.settings.threeSplitLine.displayMode = value as 'ThreeSplitLine' | 'ThreeSplitLetter';
+                            await this.updateModalSettings();
+                            this.display(); // Refresh to show/hide relevant options
+                        }),
+                );
+
+            // ThreeSplitLetter mode settings
+            if (this.plugin.settings.threeSplitLine?.displayMode === 'ThreeSplitLetter') {
+                new Setting(containerEl)
+                    .setName('ThreeSplitLetter width')
+                    .setDesc('Width of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('600')
+                            .setValue((this.plugin.settings.threeSplitLine?.threeSplitLetter?.width || 600).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 200 && num <= 800) {
+                                    if (!this.plugin.settings.threeSplitLine) this.plugin.settings.threeSplitLine = {};
+                                    if (!this.plugin.settings.threeSplitLine.threeSplitLetter) this.plugin.settings.threeSplitLine.threeSplitLetter = {};
+                                    this.plugin.settings.threeSplitLine.threeSplitLetter.width = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('ThreeSplitLetter height')
+                    .setDesc('Height of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('300')
+                            .setValue((this.plugin.settings.threeSplitLine?.threeSplitLetter?.height || 300).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 100 && num <= 400) {
+                                    if (!this.plugin.settings.threeSplitLine) this.plugin.settings.threeSplitLine = {};
+                                    if (!this.plugin.settings.threeSplitLine.threeSplitLetter) this.plugin.settings.threeSplitLine.threeSplitLetter = {};
+                                    this.plugin.settings.threeSplitLine.threeSplitLetter.height = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+            }
+
+            // ThreeSplitLine mode settings
+            if (this.plugin.settings.threeSplitLine?.displayMode === 'ThreeSplitLine') {
+                new Setting(containerEl)
+                    .setName('ThreeSplitLine width')
+                    .setDesc('Width of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('600')
+                            .setValue((this.plugin.settings.threeSplitLine?.threeSplitLine?.width || 600).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 200 && num <= 800) {
+                                    if (!this.plugin.settings.threeSplitLine) this.plugin.settings.threeSplitLine = {};
+                                    if (!this.plugin.settings.threeSplitLine.threeSplitLine) this.plugin.settings.threeSplitLine.threeSplitLine = {};
+                                    this.plugin.settings.threeSplitLine.threeSplitLine.width = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('ThreeSplitLine height')
+                    .setDesc('Height of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('300')
+                            .setValue((this.plugin.settings.threeSplitLine?.threeSplitLine?.height || 300).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 100 && num <= 400) {
+                                    if (!this.plugin.settings.threeSplitLine) this.plugin.settings.threeSplitLine = {};
+                                    if (!this.plugin.settings.threeSplitLine.threeSplitLine) this.plugin.settings.threeSplitLine.threeSplitLine = {};
+                                    this.plugin.settings.threeSplitLine.threeSplitLine.height = num;
                                     await this.updateModalSettings();
                                 }
                             }),
