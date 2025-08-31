@@ -1,13 +1,6 @@
 import { SpeedReaderSettings } from '../main';
 
-interface BaseReader {
-    updateSettings(settings: SpeedReaderSettings): void;
-    loadText(text: string): void;
-    destroy(): void;
-    applyStyles(): void;
-}
-
-export class RSVP implements BaseReader {
+export class RSVP {
     private element: HTMLElement;
     private text: string;
     private words: string[];
@@ -65,6 +58,8 @@ export class RSVP implements BaseReader {
                 this.applyMultiLineStyles();
                 break;
             case 'ellipse':
+			    this.applyEllipseStyles();
+                break;
             default:
                 this.applySingleLineStyles();
                 break;
@@ -132,18 +127,6 @@ export class RSVP implements BaseReader {
     public updateSettings(settings: SpeedReaderSettings) {
         this.settings = settings;
         this.applyStyles();
-    }
-
-    public loadText(text: string): void {
-        this.text = text;
-        this.words = text.split(/\s+/).filter(word => word.length > 0);
-        this.currentIndex = 0;
-        this.render();
-    }
-
-    public destroy(): void {
-        this.displayElement?.remove();
-        this.displayElement = null as any;
     }
 
     private getOptimalChunkSize(startIndex: number): number {

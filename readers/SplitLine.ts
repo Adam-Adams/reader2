@@ -7,7 +7,7 @@ interface BaseReader {
     applyStyles(): void;
 }
 
-export class WholeLineReader implements BaseReader {
+export class SplitLineReader implements BaseReader {
     public element: HTMLElement;
     public displayElement: HTMLDivElement;
     private container: HTMLElement;
@@ -93,7 +93,6 @@ export class WholeLineReader implements BaseReader {
         this.globalCurrentIndex = 0;
         this.preparedParagraphs = 0;
         this.totalHeight = 0;
-        this.totalLines = 0;
         this.isProcessingQueue = false;
         this.lastVisibleParagraphIndex = -1;
         this.isRendering = false;
@@ -696,13 +695,13 @@ export class WholeLineReader implements BaseReader {
     }
 
     public applyStyles() {
-        const displayMode = this.settings.wholeLine?.displayMode || 'WholeLine';
-        const singleLetterSettings = this.settings.wholeLine?.singleLetter || { chunkSize: 3 };
+        const displayMode = this.settings.splitLine?.displayMode || 'SplitLine';
+        const splitLetterSettings = this.settings.splitLine?.splitLetter || { chunkSize: 3 };
 
-        if (displayMode === 'SingleLetter') {
-            this.settings.chunkSize = singleLetterSettings.chunkSize;
+        if (displayMode === 'SplitLetter') {
+            this.settings.chunkSize = splitLetterSettings.chunkSize;
             if (this.onChunkSizeChange) {
-                this.onChunkSizeChange(singleLetterSettings.chunkSize);
+                this.onChunkSizeChange(splitLetterSettings.chunkSize);
             }
         }
 
@@ -727,26 +726,26 @@ export class WholeLineReader implements BaseReader {
         this.displayElement.style.whiteSpace = 'pre-wrap';
         
         // Set base text color based on mode
-        if (displayMode === 'SingleLetter') {
+        if (displayMode === 'SplitLetter') {
             this.displayElement.style.color = (this.settings as any).inactiveTextColor || '';
         } else {
             this.displayElement.style.color = (this.settings as any).activeTextColor || '';
         }
         
-        if (displayMode === 'SingleLetter') {
-            const singleLetterSettings = this.settings.wholeLine?.singleLetter || { width: 600, height: 300 };
-            this.displayElement.style.width = `${singleLetterSettings.width}px`;
-            this.displayElement.style.height = `${singleLetterSettings.height}px`;
+        if (displayMode === 'SplitLetter') {
+            const splitLetterSettings = this.settings.splitLine?.splitLetter || { width: 600, height: 300 };
+            this.displayElement.style.width = `${splitLetterSettings.width}px`;
+            this.displayElement.style.height = `${splitLetterSettings.height}px`;
             this.displayElement.style.minWidth = '300px';
             this.displayElement.style.maxWidth = '800px';
             this.displayElement.style.minHeight = '60px';
         } else {
-            const wholeLineSettings = this.settings.wholeLine?.wholeLine || { 
+            const splitLineSettings = this.settings.splitLine?.splitLine || { 
                 width: 600, 
                 height: 300
             };
-            this.displayElement.style.width = `${wholeLineSettings.width}px`;
-            this.displayElement.style.height = `${wholeLineSettings.height}px`;
+            this.displayElement.style.width = `${splitLineSettings.width}px`;
+            this.displayElement.style.height = `${splitLineSettings.height}px`;
             this.displayElement.style.overflowY = 'auto';
             this.displayElement.style.overflowX = 'hidden';
         }
@@ -760,13 +759,13 @@ export class WholeLineReader implements BaseReader {
     public updateSettings(settings: SpeedReaderSettings): void {
         this.resetState();
         
-        const displayMode = settings.wholeLine?.displayMode || 'SingleLetter';
-        const singleLetterSettings = settings.wholeLine?.singleLetter || { chunkSize: 1 };
+        const displayMode = settings.splitLine?.displayMode || 'SplitLine';
+        const splitLetterSettings = settings.splitLine?.splitLetter || { chunkSize: 1 };
 
-        if (displayMode === 'SingleLetter') {
-            settings.chunkSize = singleLetterSettings.chunkSize;
+        if (displayMode === 'SplitLetter') {
+            settings.chunkSize = splitLetterSettings.chunkSize;
             if (this.onChunkSizeChange) {
-                this.onChunkSizeChange(singleLetterSettings.chunkSize);
+                this.onChunkSizeChange(splitLetterSettings.chunkSize);
             }
         }
 
@@ -1133,8 +1132,8 @@ export class WholeLineReader implements BaseReader {
         this.virtualContainer.style.textAlign = 'justify';
         (this.virtualContainer.style as any)['textJustify'] = 'inter-word';
         
-        const displayMode = this.settings.linear?.displayMode || 'normal';
-        if (displayMode === 'normal') {
+        const displayMode = this.settings.splitLine?.displayMode || 'SplitLine';
+        if (displayMode === 'SplitLine') {
             this.displayElement.style.overflowY = 'auto';
             this.displayElement.style.scrollbarWidth = 'thin';
             this.displayElement.style.scrollbarColor = 'var(--scrollbar-thumb-bg) var(--scrollbar-bg)';
@@ -1224,12 +1223,12 @@ export class WholeLineReader implements BaseReader {
     }
 
     private highlightCurrentWords() {
-        const displayMode = this.settings.wholeLine?.displayMode || 'WholeLine';
-        
+        const displayMode = this.settings.splitLine?.displayMode || 'SplitLine';
+
         // Reset previously highlighted words
         this.highlightedWords.forEach(el => {
             if (el.parentElement) {
-                if (displayMode === 'SingleLetter') {
+                if (displayMode === 'SplitLetter') {
                     el.style.color = (this.settings as any).inactiveTextColor || '';
                 } else {
                     el.style.color = (this.settings as any).activeTextColor || '';
@@ -1238,128 +1237,185 @@ export class WholeLineReader implements BaseReader {
         });
         this.highlightedWords = [];
 
-        // Reset previously highlighted characters
+        // Reset previously highlighted characters by restoring the original word text
         this.highlightedCharacters.forEach(el => {
-            if (el.parentElement) {
-                el.style.color = (this.settings as any).inactiveTextColor || '';
+            const parentWord = el.parentElement;
+            if (parentWord) {
+                for (let i = 0; i < this.wordElements.length; i++) {
+                    if (this.wordElements[i] === parentWord) {
+                        if (parentWord.childNodes.length > 1 || (parentWord.firstChild && parentWord.firstChild.nodeType !== Node.TEXT_NODE)) {
+                            parentWord.textContent = this.words[i];
+                        }
+                        break;
+                    }
+                }
             }
         });
         this.highlightedCharacters = [];
 
-        // Find the line containing the current word
         const lineIndex = this.findLineIndexForWord(this.currentIndex);
-        if (lineIndex === -1) return;
+        if (lineIndex === -1 || !this.lineWordMappings[lineIndex]) return;
 
         const lineMapping = this.lineWordMappings[lineIndex];
-        const start = lineMapping.start;
-        const end = Math.min(lineMapping.end, this.words.length - 1);
+        const lineStartIndex = lineMapping.start;
+        const lineEndIndex = Math.min(lineMapping.end, this.words.length - 1);
+        const wordsInLineCount = lineEndIndex - lineStartIndex + 1;
 
-        if (displayMode === 'SingleLetter') {
-            // SingleLetter mode: highlight entire line with activeTextColor
-            for (let i = start; i <= end; i++) {
-                const wordElement = this.wordElements[i];
-                if (wordElement && wordElement.parentElement) {
-                    wordElement.style.color = (this.settings as any).activeTextColor || '#ff6b6b';
-                    this.highlightedWords.push(wordElement);
+        if (wordsInLineCount <= 0) return;
+
+        // --- NEW: Visual Split Logic ---
+        let splitIndex: number;
+
+        const lineElement = this.visibleLines.find(line =>
+            parseInt(line.dataset.lineIndex || '-1') === lineIndex
+        );
+
+        // Use visual calculation only if the line is currently rendered in the DOM
+        if (lineElement && lineElement.offsetParent !== null) {
+            const lineRect = lineElement.getBoundingClientRect();
+            const lineCenterX = lineRect.left + lineRect.width / 2;
+
+            const wordElementsOnLine = Array.from(lineElement.querySelectorAll('.linear-reader-word')) as HTMLElement[];
+            let splitIndexInLine = -1;
+
+            for (let i = 0; i < wordElementsOnLine.length; i++) {
+                const wordEl = wordElementsOnLine[i];
+                if (wordEl.offsetParent !== null) {
+                    const wordRect = wordEl.getBoundingClientRect();
+                    const wordCenterX = wordRect.left + wordRect.width / 2;
+
+                    // Find the first word whose center is past the line's center
+                    if (wordCenterX > lineCenterX) {
+                        splitIndexInLine = i;
+                        break;
+                    }
                 }
             }
-            
-            // Find and highlight the center letter with highlightColor
-            this.highlightCenterLetter(lineIndex);
-            
-            // Calculate words in this line and update chunk size
-            const wordsInLine = end - start + 1;
-            if (this.onChunkSizeChange) {
-                this.onChunkSizeChange(wordsInLine);
+
+            // If the split point is at the very beginning or not found, fall back to mathematical split for this line
+            // This handles cases with unusual alignment or very long first words.
+            if (splitIndexInLine <= 0) {
+                splitIndex = lineStartIndex + Math.ceil(wordsInLineCount / 2);
+            } else {
+                splitIndex = lineStartIndex + splitIndexInLine;
             }
+
         } else {
-            // WholeLine mode: highlight current line with highlightColor
-            for (let i = start; i <= end; i++) {
+            // Fallback to index-based calculation if line is not rendered
+            splitIndex = lineStartIndex + Math.ceil(wordsInLineCount / 2);
+        }
+        // --- END: Visual Split Logic ---
+
+        const isLeftHalfActive = this.currentIndex < splitIndex;
+
+        const highlightStart = isLeftHalfActive ? lineStartIndex : splitIndex;
+        const highlightEnd = isLeftHalfActive ? splitIndex - 1 : lineEndIndex;
+        
+        if (highlightStart > highlightEnd) return;
+
+        const wordsInChunk = highlightEnd - highlightStart + 1;
+        if (this.onChunkSizeChange) {
+            this.onChunkSizeChange(wordsInChunk);
+        }
+
+        const activeHalfWordElements: HTMLElement[] = [];
+        for (let i = highlightStart; i <= highlightEnd; i++) {
+            const wordElement = this.wordElements[i];
+            if (wordElement) {
+                activeHalfWordElements.push(wordElement);
+            }
+        }
+        
+        if (displayMode === 'SplitLetter') {
+            for (let i = lineStartIndex; i <= lineEndIndex; i++) {
                 const wordElement = this.wordElements[i];
                 if (wordElement && wordElement.parentElement) {
-                    wordElement.style.color = this.settings.highlightColor || '#ff6b6b';
-                    this.highlightedWords.push(wordElement);
+                    wordElement.style.color = (this.settings as any).inactiveTextColor || '';
                 }
             }
             
-            // Set base text color to activeTextColor
-            for (let i = 0; i < this.wordElements.length; i++) {
+            activeHalfWordElements.forEach(wordElement => {
+                wordElement.style.color = (this.settings as any).activeTextColor || '#ff6b6b';
+                this.highlightedWords.push(wordElement);
+            });
+            
+            this.highlightCenterLetter(activeHalfWordElements);
+
+        } else { // 'SplitLine' mode
+            for (let i = lineStartIndex; i <= lineEndIndex; i++) {
                 const wordElement = this.wordElements[i];
-                if (wordElement && wordElement.parentElement && 
-                    !this.highlightedWords.includes(wordElement)) {
+                if (wordElement && wordElement.parentElement && !activeHalfWordElements.includes(wordElement)) {
                     wordElement.style.color = (this.settings as any).activeTextColor || '';
                 }
             }
 
-            // Calculate words in this line and update chunk size
-            const wordsInLine = end - start + 1;
-            if (this.onChunkSizeChange) {
-                this.onChunkSizeChange(wordsInLine);
-            }
+            activeHalfWordElements.forEach(wordElement => {
+                wordElement.style.color = this.settings.highlightColor || '#ff6b6b';
+                this.highlightedWords.push(wordElement);
+            });
         }
     }
 
-    private highlightCenterLetter(lineIndex: number) {
-        const lineElement = this.visibleLines.find(line => 
-            parseInt(line.dataset.lineIndex || '-1') === lineIndex
-        );
-        
-        if (!lineElement) return;
-        
-        // Get all word elements in the line
-        const wordElements = Array.from(lineElement.querySelectorAll('.linear-reader-word')) as HTMLElement[];
+    private highlightCenterLetter(wordElements: HTMLElement[]) {
         if (wordElements.length === 0) return;
         
-        // Calculate the actual content boundaries of the line
+        // Calculate the content boundaries of the provided group of words
         let leftmostX = Infinity;
         let rightmostX = -Infinity;
         
-        wordElements.forEach(wordElement => {
-            const rect = wordElement.getBoundingClientRect();
-            leftmostX = Math.min(leftmostX, rect.left);
-            rightmostX = Math.max(rightmostX, rect.right);
-        });
+        for (const wordElement of wordElements) {
+            if (wordElement.offsetParent !== null) {
+                const rect = wordElement.getBoundingClientRect();
+                leftmostX = Math.min(leftmostX, rect.left);
+                rightmostX = Math.max(rightmostX, rect.right);
+            }
+        }
         
-        // Use the center of the actual text content for this line
+        if (leftmostX === Infinity) return;
+
+        // Find the visual center of the text content for this group
         const centerX = (leftmostX + rightmostX) / 2;
         
-        // First find the closest word to center
+        // Find the word closest to the center within the group
         let closestWord: HTMLElement | null = null;
         let minWordDistance = Infinity;
         
-        wordElements.forEach(wordElement => {
-            const wordRect = wordElement.getBoundingClientRect();
-            const wordCenterX = wordRect.left + wordRect.width / 2;
-            const distance = Math.abs(wordCenterX - centerX);
-            
-            if (distance < minWordDistance) {
-                minWordDistance = distance;
-                closestWord = wordElement;
+        for (const wordElement of wordElements) {
+            if (wordElement.offsetParent !== null) {
+                const wordRect = wordElement.getBoundingClientRect();
+                const wordCenterX = wordRect.left + wordRect.width / 2;
+                const distance = Math.abs(wordCenterX - centerX);
+                
+                if (distance < minWordDistance) {
+                    minWordDistance = distance;
+                    closestWord = wordElement;
+                }
             }
-        });
+        }
         
-        // Now find the closest letter within that word
         if (!closestWord) return;
         
-        const targetWord = closestWord as HTMLElement;
-        const wordText = targetWord.textContent || '';
-        targetWord.innerHTML = '';
+        const wordText = closestWord.textContent || '';
+        if (wordText === '') return;
+        
+        closestWord.innerHTML = ''; // Clear the word to add character spans
         
         const charSpans: HTMLElement[] = [];
-        let closestCharIndex = 0;
-        let minCharDistance = Infinity;
         
-        // Create spans for each character
+        // Create spans for each character to measure them
         for (let i = 0; i < wordText.length; i++) {
             const charSpan = document.createElement('span');
             charSpan.textContent = wordText[i];
             charSpan.style.display = 'inline';
-            targetWord.appendChild(charSpan);
+            closestWord.appendChild(charSpan);
             charSpans.push(charSpan);
         }
         
-        // Find closest character to center
-        charSpans.forEach((charSpan, charIndex) => {
+        // Find the character closest to the group's center
+        let closestCharIndex = -1;
+        let minCharDistance = Infinity;
+        
+        for (const [charIndex, charSpan] of charSpans.entries()) {
             const charRect = charSpan.getBoundingClientRect();
             const charCenterX = charRect.left + charRect.width / 2;
             const distance = Math.abs(charCenterX - centerX);
@@ -1368,10 +1424,10 @@ export class WholeLineReader implements BaseReader {
                 minCharDistance = distance;
                 closestCharIndex = charIndex;
             }
-        });
+        }
         
-        // Restore original content and highlight the target character
-        targetWord.innerHTML = '';
+        // Reconstruct the word with the highlighted character
+        closestWord.innerHTML = '';
         for (let i = 0; i < wordText.length; i++) {
             const charSpan = document.createElement('span');
             charSpan.textContent = wordText[i];
@@ -1379,11 +1435,11 @@ export class WholeLineReader implements BaseReader {
             if (i === closestCharIndex) {
                 charSpan.style.color = this.settings.highlightColor || '#ff6b6b';
             } else {
-                charSpan.style.color = (this.settings as any).activeTextColor || '';
+                charSpan.style.color = 'inherit'; // Inherit color from the parent word span
             }
             
-            targetWord.appendChild(charSpan);
-            // Dodaj sve span elemente u highlightedCharacters za praćenje
+            closestWord.appendChild(charSpan);
+            // Add all character spans to highlightedCharacters for cleanup on the next update
             this.highlightedCharacters.push(charSpan);
         }
     }
