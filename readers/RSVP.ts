@@ -20,7 +20,7 @@ export class RSVP {
         // Create display section
         const textSection = this.element.createDiv('speed-reader-text-section');
         this.displayElement = textSection.createDiv('speed-reader-display');
-        this.displayElement.createEl('div', { 
+        this.displayElement.createEl('div', {
             text: 'Select text or load a file to start reading',
             cls: 'placeholder-text'
         });
@@ -107,7 +107,7 @@ export class RSVP {
         const ellipseSettings = this.settings.rsvp?.ellipse || { width: 300, height: 200 };
         const width = ellipseSettings.width;
         const height = ellipseSettings.height;
-        
+
         this.displayElement.style.borderRadius = '50%';
         this.displayElement.style.width = `${width}px`;
         this.displayElement.style.height = `${height}px`;
@@ -119,7 +119,7 @@ export class RSVP {
         this.displayElement.style.alignItems = 'center';
         this.displayElement.style.padding = '0';
         this.displayElement.style.boxSizing = 'border-box';
-        
+
         // Create elliptical clipping
         this.displayElement.style.clipPath = `ellipse(${width/2}px ${height/2}px at 50% 50%)`;
     }
@@ -131,7 +131,7 @@ export class RSVP {
 
     private getOptimalChunkSize(startIndex: number): number {
         const displayMode = this.settings.rsvp?.displayMode || 'ellipse';
-        
+
         switch (displayMode) {
             case 'single-line':
                 // SIMPLIFIED: Always use the configured chunk size for single-line mode
@@ -146,7 +146,30 @@ export class RSVP {
 
     private getOptimalChunkSizeMultiLine(startIndex: number): number {
         const multiLineSettings = this.settings.rsvp?.multiLine || { rows: 3, width: 400 };
-        return Math.min(this.settings.chunkSize, this.words.length - startIndex);
+        const padding = 20;
+        const maxWidth = multiLineSettings.width - (padding * 2);
+        const maxHeight = this.calculateMultiLineHeight() - (padding * 2);
+
+        let optimalSize = 1;
+        // Reasonable upper limit to prevent performance issues
+        const maxSize = Math.min(this.words.length - startIndex, 100);
+
+        for (let size = 1; size <= maxSize; size++) {
+            const chunk = [];
+            for (let i = 0; i < size && (startIndex + i) < this.words.length; i++) {
+                chunk.push(this.words[startIndex + i]);
+            }
+            const testText = chunk.join(' ');
+
+            if (this.doesTextFitInRectangle(testText, maxWidth, maxHeight)) {
+                optimalSize = size;
+            } else {
+                // Stop as soon as the text overflows
+                break;
+            }
+        }
+
+        return Math.max(1, optimalSize); // Ensure at least one word is returned
     }
 
     private getOptimalChunkSizeEllipse(startIndex: number): number {
@@ -156,35 +179,39 @@ export class RSVP {
         const maxHeight = ellipseSettings.height - 2 * padding;
         const fontSize = this.settings.fontSize || 24;
         const lineHeight = fontSize * 1.2;
-        
+
         const MAX_CHUNK_SIZE = 100;
         const maxSize = Math.min(this.words.length - startIndex, MAX_CHUNK_SIZE);
         const chunk = this.words.slice(startIndex, startIndex + maxSize);
-        
+
         // Get actual number of words that fit
         const layout = this.layoutTextInEllipse(chunk, maxWidth, maxHeight, lineHeight);
-        
+
         // Return actual words used (minimum 1 word)
         return Math.max(1, layout.wordsUsed);
     }
 
     private calculateMultiLineHeight(): number {
         const multiLineSettings = this.settings.rsvp?.multiLine || { rows: 3, width: 400 };
-        const lineHeight = 1.4;
         const fontSize = this.settings.fontSize || 24;
-        return (fontSize * lineHeight * multiLineSettings.rows) + 40;
+        const lineHeightPx = Math.floor(fontSize * 1.4);
+        const padding = 20;
+        return (lineHeightPx * multiLineSettings.rows) + (padding * 2);
     }
 
     private doesTextFitInRectangle(text: string, maxWidth: number, maxHeight: number): boolean {
         const testElement = this.createTestElement();
         testElement.style.width = `${maxWidth}px`;
         testElement.style.whiteSpace = 'normal';
+        // Use the same line height as the actual display for accurate measurement
+        const fontSize = this.settings.fontSize || 24;
+        testElement.style.lineHeight = `${Math.floor(fontSize * 1.4)}px`;
         testElement.textContent = text;
-        
+
         document.body.appendChild(testElement);
         const fits = testElement.scrollHeight <= maxHeight;
         document.body.removeChild(testElement);
-        
+
         return fits;
     }
 
@@ -192,7 +219,7 @@ export class RSVP {
         const words = text.split(' ');
         const fontSize = this.settings.fontSize || 24;
         const lineHeight = fontSize * 1.2;
-        
+
         // Pokušaj da rasporedi tekst u elipsi
         const layout = this.layoutTextInEllipse(words, maxWidth, maxHeight, lineHeight);
         return layout.success;
@@ -204,15 +231,15 @@ export class RSVP {
         let currentY = lineHeight / 2; // Počni od vrha
         let wordIndex = 0;
         let wordsUsed = 0;
-        
+
         while (wordIndex < words.length) {
             const word = words[wordIndex];
-            
+
             // Testiramo da li možemo dodati reč u trenutnu liniju
             const testLine = currentLine.length === 0 ? word : currentLine.join(' ') + ' ' + word;
             const textWidth = this.measureTextWidth(testLine);
             const availableWidth = this.getEllipseWidthAtY(currentY, maxWidth, maxHeight);
-            
+
             if (textWidth <= availableWidth && availableWidth > 0) {
                 currentLine.push(word);
                 wordIndex++;
@@ -233,7 +260,7 @@ export class RSVP {
                     lines.push(currentLine.join(' '));
                     currentLine = [];
                     currentY += lineHeight;
-                    
+
                     // Proveri da li ima mesta za sledeću liniju
                     if (currentY + lineHeight / 2 > maxHeight) {
                         // Nema više mesta, završi
@@ -242,15 +269,15 @@ export class RSVP {
                 }
             }
         }
-        
+
         // Dodaj poslednju liniju ako nije prazna
         if (currentLine.length > 0) {
             lines.push(currentLine.join(' '));
         }
-        
+
         // Success je true samo ako je najmanje jedna reč uspešno uključena
         const success = wordsUsed > 0 && lines.length > 0;
-        
+
         return { success, lines, wordsUsed };
     }
 
@@ -258,14 +285,14 @@ export class RSVP {
         const a = maxWidth / 2;  // polu-širina elipse
         const b = maxHeight / 2; // polu-visina elipse
         const centerY = maxHeight / 2;
-        
+
         // Relativna pozicija od centra elipse
         const relativeY = Math.abs(y - centerY);
         const normalizedY = relativeY / b;
-        
+
         // Ako je van elipse, nema širine
         if (normalizedY >= 1) return 0;
-        
+
         // Računanje širine na datoj visini koristeći jednačinu elipse
         const xHalf = a * Math.sqrt(1 - normalizedY * normalizedY);
         return Math.max(0, xHalf * 2 * 0.98); // 98% širine - skoro puna širina
@@ -275,11 +302,11 @@ export class RSVP {
         const testElement = this.createTestElement();
         testElement.style.whiteSpace = 'nowrap';
         testElement.textContent = text;
-        
+
         document.body.appendChild(testElement);
         const width = testElement.scrollWidth;
         document.body.removeChild(testElement);
-        
+
         return width;
     }
 
@@ -307,7 +334,7 @@ export class RSVP {
     private render() {
         if (this.words.length === 0) {
             this.displayElement.empty();
-            const placeholderEl = this.displayElement.createEl('div', { 
+            const placeholderEl = this.displayElement.createEl('div', {
                 text: 'Select text or load a file to start reading',
                 cls: 'placeholder-text'
             });
@@ -318,12 +345,12 @@ export class RSVP {
         }
 
         this.displayElement.empty();
-        
+
         const displayMode = this.settings.rsvp?.displayMode || 'ellipse';
-        
+
         if (this.currentIndex < this.words.length) {
             const optimalChunkSize = this.getOptimalChunkSize(this.currentIndex);
-            
+
             // Dynamically update chunkSize for multi-line and ellipse modes
             if (displayMode === 'multi-line' || displayMode === 'ellipse') {
                 if (optimalChunkSize !== this.settings.chunkSize) {
@@ -331,23 +358,19 @@ export class RSVP {
                     this.onChunkSizeChange(optimalChunkSize);
                 }
             }
-            
-            // FIX: Always take at least 1 word, and up to remaining words
-            //const remainingWords = this.words.length - this.currentIndex;
-            //const actualChunkSize = Math.min(optimalChunkSize, remainingWords);
-            
+
             const chunk = [];
             for (let i = 0; i < optimalChunkSize && (this.currentIndex + i) < this.words.length; i++) {
                 chunk.push(this.words[this.currentIndex + i]);
             }
-            
+
             if (displayMode === 'ellipse') {
                 this.renderTextInEllipse(chunk);
             } else {
                 this.renderSimpleChunk(chunk, displayMode);
             }
         } else {
-            const completeEl = this.displayElement.createEl('div', { 
+            const completeEl = this.displayElement.createEl('div', {
                 text: 'Reading complete!',
                 cls: 'complete-text'
             });
@@ -377,9 +400,9 @@ export class RSVP {
             wordEl.style.overflow = 'hidden';
             wordEl.style.textOverflow = 'ellipsis';
             wordEl.style.lineHeight = `${Math.floor((this.settings.fontSize || 24) * 1.4)}px`;
-            wordEl.style.maxHeight = `${Math.floor((this.settings.fontSize || 24) * 1.4 * 
+            wordEl.style.maxHeight = `${Math.floor((this.settings.fontSize || 24) * 1.4 *
                 (this.settings.rsvp?.multiLine?.rows || 3))}px`;
-        } 
+        }
         // Single-line styles remain unchanged
         else if (displayMode === 'single-line') {
             wordEl.style.display = 'inline-block';
@@ -395,20 +418,20 @@ export class RSVP {
         const maxHeight = ellipseSettings.height - 2 * padding;
         const fontSize = this.settings.fontSize || 24;
         const lineHeight = fontSize * 1.2;
-        
+
         // Kreiraj layout
         const layout = this.layoutTextInEllipse(words, maxWidth, maxHeight, lineHeight);
-        
+
         if (!layout.success) {
             // Fallback - prikaži sve reči u jednom redu
-            const wordEl = this.displayElement.createEl('div', { 
+            const wordEl = this.displayElement.createEl('div', {
                 text: words.join(' '),
                 cls: 'current-word'
             });
             this.styleWordElement(wordEl);
             return;
         }
-        
+
         // Kreiraj kontejner za tekst
         const textContainer = this.displayElement.createEl('div', { cls: 'text-container' });
         textContainer.style.position = 'relative';
@@ -418,14 +441,14 @@ export class RSVP {
         textContainer.style.flexDirection = 'column';
         textContainer.style.justifyContent = 'flex-start';
         textContainer.style.alignItems = 'center';
-        
+
         // Dodaj svaku liniju počevši od vrha
         layout.lines.forEach((line, index) => {
-            const lineEl = textContainer.createEl('div', { 
+            const lineEl = textContainer.createEl('div', {
                 text: line,
                 cls: 'text-line'
             });
-            
+
             lineEl.style.position = 'absolute';
             lineEl.style.top = `${padding + index * lineHeight}px`;
             lineEl.style.left = '50%';
@@ -434,7 +457,7 @@ export class RSVP {
             lineEl.style.textAlign = 'center';
             lineEl.style.width = 'auto';
             lineEl.style.maxWidth = '100%';
-            
+
             this.styleWordElement(lineEl);
         });
     }

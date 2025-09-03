@@ -311,11 +311,14 @@ export class Commands {
         });
 
         const speedControl = this.controlsElement.createDiv('speed-control');
-        speedControl.createEl('label', { text: 'Speed (WPM): ' });
+        speedControl.createEl('label', { text: 'WPM: ' });
         const speedInput = speedControl.createEl('input', {
             type: 'number',
             value: this.settings.wordsPerMinute.toString(),
-            cls: 'speed-input'
+            cls: 'speed-input',
+            attr: {
+                style: 'width: 50px;'
+            }
         });
 
         const chunkControl = this.controlsElement.createDiv('chunk-control');
@@ -323,7 +326,10 @@ export class Commands {
         this.chunkInput = chunkControl.createEl('input', {
             type: 'number',
             value: this.settings.chunkSize.toString(),
-            cls: 'chunk-input'
+            cls: 'chunk-input',
+            attr: {
+                style: 'width: 40px;'
+            }
         }) as HTMLInputElement;
         this.chunkInput.min = '1';
         this.chunkInput.max = '50';
