@@ -6,6 +6,7 @@ import { LinearReader } from './readers/Linear';
 import { WholeLineReader } from './readers/WholeLine'; // Import WholeLineReader
 import { SplitLineReader } from './readers/SplitLine'; // Import SplitLineReader
 import { ThreeSplitLineReader } from './readers/ThreeSplitLine'; // Import ThreeSplitLineReader
+import { FocusReader } from './readers/Focus'; // Import FocusReader
 import { Commands } from './readers/commands';
 import { Progress } from './readers/progress';
 import { FileButtons } from './readers/fileButtons';
@@ -18,8 +19,7 @@ export class SpeedReaderModal extends Modal {
     private words: string[] = [];
     private globalCurrentIndex: number = 0; // Nova globalna pozicija
     private miniPreview: MiniPreview | null = null;
-    private reader: RSVP | LinearReader | WholeLineReader | SplitLineReader | ThreeSplitLineReader | null = null;
-    private commands: Commands | null = null;
+    private reader: RSVP | LinearReader | WholeLineReader | SplitLineReader | ThreeSplitLineReader | FocusReader | null = null;    private commands: Commands | null = null;
     private progress: Progress | null = null;
     private fileButtons: FileButtons | null = null;
     private wordSelectorModal: WordSelectorModal | null = null;
@@ -162,6 +162,35 @@ export class SpeedReaderModal extends Modal {
         }
     }
 
+    private getDisplayModeString(): string {
+        const { readerType } = this.settings;
+        switch (readerType) {
+            case 'rsvp':
+                return `RSVP (${this.settings.rsvp?.displayMode || 'ellipse'})`;
+            case 'linear':
+                return `Linear (${this.settings.linear?.displayMode || 'normal'})`;
+            case 'wholeLine':
+                return `WholeLine (${this.settings.wholeLine?.displayMode || 'WholeLine'})`;
+            case 'splitLine':
+                return `SplitLine (${this.settings.splitLine?.displayMode || 'SplitLine'})`;
+            case 'threeSplitLine':
+                return `ThreeSplitLine (${this.settings.threeSplitLine?.displayMode || 'ThreeSplitLine'})`;
+            case 'focus':
+                return `Focus (${this.settings.focus?.displayMode || 'Margin'})`;
+            default:
+                return 'Unknown';
+        }
+    }
+
+    private updateHeaderTitle() {
+        if (this.headerEl) {
+            const titleEl = this.headerEl.querySelector('h2');
+            if (titleEl) {
+                titleEl.textContent = `Speed Reader - ${this.getDisplayModeString()}`;
+            }
+        }
+    }
+
     setText(text: string) {
         this.text = text;
         this.words = this.preprocessText(text);
@@ -241,6 +270,9 @@ export class SpeedReaderModal extends Modal {
         if (this.commands) {
             this.commands.updateSettings(settings);
         } */
+        
+        // Update header title with new display mode
+        this.updateHeaderTitle();
     }
 
     // Nova metoda za postavljanje globalne pozicije
@@ -310,7 +342,7 @@ export class SpeedReaderModal extends Modal {
         headerContent.style.boxSizing = 'border-box';
         headerContent.style.minWidth = '0'; // Allow shrinking
 
-        const title = headerContent.createEl('h2', { text: 'Speed Reader' });
+        const title = headerContent.createEl('h2', { text: `Speed Reader - ${this.getDisplayModeString()}` });
         title.style.margin = '0';
         title.style.fontSize = '18px';
         title.style.fontWeight = '600';
@@ -354,7 +386,9 @@ export class SpeedReaderModal extends Modal {
         } else if (readerType === 'splitLine') {
             this.reader = new SplitLineReader(readerContainer, this.settings, () => {});
         } else if (readerType === 'threeSplitLine') {
-            this.reader = new ThreeSplitLineReader(readerContainer, this.settings, () => {}); // Added ThreeSplitLine option
+            this.reader = new ThreeSplitLineReader(readerContainer, this.settings, () => {});
+        } else if (readerType === 'focus') {
+            this.reader = new FocusReader(readerContainer, this.settings, () => {}); // Added Focus option
         } else {
             this.reader = new RSVP(readerContainer, this.settings, () => {});
         }

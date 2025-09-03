@@ -17,7 +17,7 @@ export interface SpeedReaderSettings {
     fontFamily: string;
     fontSize: number;
     letterSpacing: number;
-    readerType: 'rsvp' | 'linear' | 'wholeLine' | 'splitLine' | 'threeSplitLine'; // Added threeSplitLine option
+    readerType: 'rsvp' | 'linear' | 'wholeLine' | 'splitLine' | 'threeSplitLine' | 'focus'; // Added focus option
 
     // RSVP settings
     rsvp?: {
@@ -83,6 +83,20 @@ export interface SpeedReaderSettings {
             height?: number;
         };
         threeSplitLine?: {
+            width?: number;
+            height?: number;
+        };
+    };
+        // Focus reader settings
+    focus?: {
+        displayMode: 'Margin' | 'Fixation';
+        fixation?: {
+            chunkSize: number;
+            width?: number;
+            height?: number;
+        };
+        margin?: {
+            percentage?: number;
             width?: number;
             height?: number;
         };
@@ -180,6 +194,20 @@ const DEFAULT_SETTINGS: SpeedReaderSettings = {
             height: 300
         },
         threeSplitLine: {
+            width: 600,
+            height: 300
+        }
+    },
+        // Focus reader settings
+    focus: {
+        displayMode: 'Margin',
+        fixation: {
+            chunkSize: 1,
+            width: 600,
+            height: 300
+        },
+        margin: {
+            percentage: 10,
             width: 600,
             height: 300
         }

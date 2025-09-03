@@ -1,14 +1,14 @@
 {
   "wordsPerMinute": 500,
-  "highlightColor": "#6bffee",
-  "chunkSize": 18,
+  "highlightColor": "#ff756b",
+  "chunkSize": 30,
   "autoAdvance": true,
   "fontFamily": "Arial",
   "fontSize": 18,
   "letterSpacing": 0,
-  "readerType": "rsvp",
+  "readerType": "focus",
   "rsvp": {
-    "displayMode": "multi-line",
+    "displayMode": "ellipse",
     "singleLine": {
       "wordsPerLine": 8
     },
@@ -58,22 +58,35 @@
     }
   },
   "threeSplitLine": {
-    "displayMode": "ThreeSplitLetter",
+    "displayMode": "ThreeSplitLine",
     "threeSplitLetter": {
       "chunkSize": 3,
-      "width": 700,
-      "height": 400
+      "width": 600,
+      "height": 300
     },
     "threeSplitLine": {
-      "width": 700,
+      "width": 600,
+      "height": 300
+    }
+  },
+  "focus": {
+    "displayMode": "Margin",
+    "fixation": {
+      "chunkSize": 3,
+      "width": 500,
       "height": 400
+    },
+    "margin": {
+      "width": 600,
+      "height": 300,
+      "percentage": 10
     }
   },
   "windowState": {
     "left": "25px",
     "top": "21px",
-    "width": "989px",
-    "height": "703px"
+    "width": "932px",
+    "height": "670px"
   },
   "textInputModalSettings": {
     "windowState": {
@@ -106,8 +119,8 @@
     "height": "748px"
   },
   "fontSettingsPosition": {
-    "left": "834px",
-    "top": "249.863px"
+    "left": "850px",
+    "top": "161.863px"
   },
   "activeTextColor": "#e0e0e0",
   "inactiveTextColor": "#808080"

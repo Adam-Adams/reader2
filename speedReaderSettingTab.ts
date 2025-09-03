@@ -241,10 +241,11 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                     .addOption('linear', 'Linear')
                     .addOption('wholeLine', 'WholeLine')
                     .addOption('splitLine', 'SplitLine')
-                    .addOption('threeSplitLine', 'ThreeSplitLine') // Added ThreeSplitLine option
+                    .addOption('threeSplitLine', 'ThreeSplitLine')
+                    .addOption('focus', 'Focus')
                     .setValue(this.plugin.settings.readerType || 'rsvp')
                     .onChange(async (value) => {
-                        this.plugin.settings.readerType = value as 'rsvp' | 'linear' | 'wholeLine' | 'splitLine' | 'threeSplitLine';
+                        this.plugin.settings.readerType = value as 'rsvp' | 'linear' | 'wholeLine' | 'splitLine' | 'threeSplitLine' | 'focus';
                         // Reset display mode when changing reader type
                         if (value === 'linear') {
                             this.plugin.settings.rsvp = undefined;
@@ -260,6 +261,12 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                             this.plugin.settings.linear = undefined;
                             this.plugin.settings.wholeLine = undefined;
                             this.plugin.settings.splitLine = undefined;
+                        } else if (value === 'focus') {
+                            this.plugin.settings.rsvp = undefined;
+                            this.plugin.settings.linear = undefined;
+                            this.plugin.settings.wholeLine = undefined;
+                            this.plugin.settings.splitLine = undefined;
+                            this.plugin.settings.threeSplitLine = undefined;
                         } else {
                             if (!this.plugin.settings.rsvp) {
                                 this.plugin.settings.rsvp = { displayMode: 'ellipse' };
@@ -699,6 +706,152 @@ export class SpeedReaderSettingTab extends PluginSettingTab {
                                     if (!this.plugin.settings.threeSplitLine) this.plugin.settings.threeSplitLine = {};
                                     if (!this.plugin.settings.threeSplitLine.threeSplitLine) this.plugin.settings.threeSplitLine.threeSplitLine = {};
                                     this.plugin.settings.threeSplitLine.threeSplitLine.height = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+            }
+        } else if (this.plugin.settings.readerType === 'focus') {
+            // Focus display mode settings
+            new Setting(containerEl)
+                .setName('Focus display mode')
+                .setDesc('Choose how text is displayed in Focus mode')
+                .addDropdown(dropdown =>
+                    dropdown
+                        .addOption('Margin', 'Margin')
+                        .addOption('Fixation', 'Fixation')
+                        .setValue(this.plugin.settings.focus?.displayMode || 'Margin')
+                        .onChange(async (value) => {
+                            if (!this.plugin.settings.focus) {
+                                this.plugin.settings.focus = {};
+                            }
+                            this.plugin.settings.focus.displayMode = value as 'Margin' | 'Fixation';
+                            await this.updateModalSettings();
+                            this.display(); // Refresh to show/hide relevant options
+                        }),
+                );
+
+            // Fixation mode settings
+            if (this.plugin.settings.focus?.displayMode === 'Fixation') {
+                /* new Setting(containerEl)
+                    .setName('Fixation chunk size')
+                    .setDesc('Number of words to display at once')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('1')
+                            .setValue((this.plugin.settings.focus?.fixation?.chunkSize || 1).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 1 && num <= 10) {
+                                    if (!this.plugin.settings.focus) this.plugin.settings.focus = {};
+                                    if (!this.plugin.settings.focus.fixation) this.plugin.settings.focus.fixation = {};
+                                    this.plugin.settings.focus.fixation.chunkSize = num;
+                                    this.plugin.settings.chunkSize = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    ); */
+
+                new Setting(containerEl)
+                    .setName('Fixation width')
+                    .setDesc('Width of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('600')
+                            .setValue((this.plugin.settings.focus?.fixation?.width || 600).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 200 && num <= 800) {
+                                    if (!this.plugin.settings.focus) this.plugin.settings.focus = {};
+                                    if (!this.plugin.settings.focus.fixation) this.plugin.settings.focus.fixation = {};
+                                    this.plugin.settings.focus.fixation.width = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('Fixation height')
+                    .setDesc('Height of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('300')
+                            .setValue((this.plugin.settings.focus?.fixation?.height || 300).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 100 && num <= 400) {
+                                    if (!this.plugin.settings.focus) this.plugin.settings.focus = {};
+                                    if (!this.plugin.settings.focus.fixation) this.plugin.settings.focus.fixation = {};
+                                    this.plugin.settings.focus.fixation.height = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+            }
+
+            // Margin mode settings
+            if (this.plugin.settings.focus?.displayMode === 'Margin') {
+                new Setting(containerEl)
+                    .setName('Margin %')
+                    .setDesc('Percentage of margin around the text')
+                    .addSlider(slider =>
+                        slider
+                            .setLimits(0, 50, 1)
+                            .setValue(this.plugin.settings.focus?.margin?.percentage || 10)
+                            .setDynamicTooltip()
+                            .onChange(async (value) => {
+                                if (!this.plugin.settings.focus) this.plugin.settings.focus = {};
+                                if (!this.plugin.settings.focus.margin) this.plugin.settings.focus.margin = {};
+                                this.plugin.settings.focus.margin.percentage = value;
+                                await this.updateModalSettings();
+                            }),
+                    )
+                    .addText(text =>
+                        text
+                            .setPlaceholder('10')
+                            .setValue((this.plugin.settings.focus?.margin?.percentage || 10).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 0 && num <= 50) {
+                                    if (!this.plugin.settings.focus) this.plugin.settings.focus = {};
+                                    if (!this.plugin.settings.focus.margin) this.plugin.settings.focus.margin = {};
+                                    this.plugin.settings.focus.margin.percentage = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('Margin width')
+                    .setDesc('Width of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('600')
+                            .setValue((this.plugin.settings.focus?.margin?.width || 600).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 200 && num <= 800) {
+                                    if (!this.plugin.settings.focus) this.plugin.settings.focus = {};
+                                    if (!this.plugin.settings.focus.margin) this.plugin.settings.focus.margin = {};
+                                    this.plugin.settings.focus.margin.width = num;
+                                    await this.updateModalSettings();
+                                }
+                            }),
+                    );
+
+                new Setting(containerEl)
+                    .setName('Margin height')
+                    .setDesc('Height of the display area in pixels')
+                    .addText(text =>
+                        text
+                            .setPlaceholder('300')
+                            .setValue((this.plugin.settings.focus?.margin?.height || 300).toString())
+                            .onChange(async (value) => {
+                                const num = parseInt(value);
+                                if (!isNaN(num) && num >= 100 && num <= 400) {
+                                    if (!this.plugin.settings.focus) this.plugin.settings.focus = {};
+                                    if (!this.plugin.settings.focus.margin) this.plugin.settings.focus.margin = {};
+                                    this.plugin.settings.focus.margin.height = num;
                                     await this.updateModalSettings();
                                 }
                             }),
